@@ -1,16 +1,48 @@
-# Platform Upgrader Reference
+# platform-upgrader
 
-This folder is a documentation-only reference pack for a dedicated repository that publishes `@moritzbrantner/platform-upgrader`. It is not a live package inside this monorepo.
+Private CLI package for deterministic scaffold-family repo audits and structural migrations.
 
-## What this reference pack includes
+## Commands
 
-- `.platform-upgrader.json` example
-- scaffold-v2 migration contract notes
+Audit a repo without mutating it:
 
-## How to use it
+```bash
+bunx @moritzbrantner/platform-upgrader audit .
+```
 
-1. Create a new private repository for the upgrader package.
-2. Copy the example config and migration notes from this folder.
-3. Build the real CLI package in that repository.
-4. Keep `audit` non-mutating and `apply` deterministic.
-5. Ship scaffold migrations as explicit reviewable PRs into downstream repos.
+Apply the `scaffold-v2` migration to a target repo:
+
+```bash
+bunx @moritzbrantner/platform-upgrader apply scaffold-v2 .
+```
+
+You can also run the local checkout directly:
+
+```bash
+bun run test
+node ./src/cli.js audit ../next-template
+node ./src/cli.js apply scaffold-v2 ./tests/fixtures/electron-template
+```
+
+## Package contract
+
+- package name: `@moritzbrantner/platform-upgrader`
+- supported commands:
+  - `audit [path]`
+  - `apply scaffold-v2 [path]`
+- `audit` must remain non-mutating
+- `apply scaffold-v2` must remain deterministic and idempotent
+
+## Repository contents
+
+- `src/cli.js`: CLI entrypoint
+- `src/index.js`: audit/apply implementation
+- `migrations/scaffold-v2.md`: migration contract notes
+- `.platform-upgrader.json.example`: example downstream config
+- `tests/platform-upgrader.test.js`: contract and idempotence coverage
+
+## Release model
+
+- publish to GitHub Packages
+- consume from maintained repos with `bunx @moritzbrantner/platform-upgrader ...`
+- keep downstream adoption reviewable through explicit PRs rather than hidden sync

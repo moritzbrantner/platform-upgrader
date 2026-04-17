@@ -1,13 +1,26 @@
 {
   "name": "@moritzbrantner/platform-upgrader",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moritzbrantner/platform-upgrader.git"
+  },
+  "files": [
+    "src",
+    "migrations",
+    ".platform-upgrader.json.example",
+    "README.md"
+  ],
   "bin": {
     "platform-upgrader": "./src/cli.js"
   },
   "scripts": {
     "test": "bun test ./tests/platform-upgrader.test.js"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
   },
   "packageManager": "bun@1.3.12"
 }
