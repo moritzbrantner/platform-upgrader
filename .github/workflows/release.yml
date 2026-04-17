@@ -1,0 +1,19 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: read
+      packages: write
+    uses: moritzbrantner/reusable-workflows/.github/workflows/release-template.yml@scaffold-v2-initial
+    with:
+      validate_command: bun run test
+      release_type: package
+      release_command: npm publish
+    secrets:
+      node_auth_token: ${{ secrets.GH_PACKAGES_TOKEN }}
