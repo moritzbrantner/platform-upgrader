@@ -10,8 +10,8 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: moritzbrantner/reusable-workflows/.github/workflows/release-template.yml@scaffold-v2-initial
+    uses: moritzbrantner/reusable-workflows/.github/workflows/release-template.yml@scaffold-v2-release-auth
     with:
       validate_command: bun run test
       release_type: package
-      release_command: NODE_AUTH_TOKEN=${{ github.token }} npm publish
+      release_command: npm publish
