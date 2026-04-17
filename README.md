@@ -46,3 +46,5 @@ node ./src/cli.js apply scaffold-v2 ./tests/fixtures/electron-template
 - publish to GitHub Packages
 - consume from maintained repos with `bunx @moritzbrantner/platform-upgrader ...`
 - keep downstream adoption reviewable through explicit PRs rather than hidden sync
+
+See [SCAFFOLD_ALIGNMENT.md](./SCAFFOLD_ALIGNMENT.md) for the repo-family alignment contract for this repository.
