@@ -8,34 +8,19 @@ import { describe, expect, it } from "bun:test";
 import { applyScaffoldV2, auditRepo } from "../src/index.js";
 
 const repoRoot = path.resolve(import.meta.dir, "..");
-const workspaceRoot = path.resolve(repoRoot, "..");
-
-describe("platform-upgrader audit", () => {
-  it("passes against the maintained scaffold repos without mutating them", () => {
-    for (const repoName of [
-      "monorepo",
-      "next-template",
-      "expo-template",
-      "electron-template",
-    ]) {
-      const result = auditRepo(path.join(workspaceRoot, repoName));
-      expect(result.ok).toBe(true);
-      expect(result.issues).toEqual([]);
-    }
-  });
-});
+const fixtureRepoNames = [
+  "monorepo",
+  "next-template",
+  "expo-template",
+  "electron-template",
+];
 
 describe("platform-upgrader apply scaffold-v2", () => {
   it("updates fixture repos deterministically and remains idempotent", async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), "platform-upgrader-"));
 
     try {
-      for (const repoName of [
-        "monorepo",
-        "next-template",
-        "expo-template",
-        "electron-template",
-      ]) {
+      for (const repoName of fixtureRepoNames) {
         const sourceRoot = path.join(repoRoot, "tests", "fixtures", repoName);
         const targetRoot = path.join(tempRoot, repoName);
         await cp(sourceRoot, targetRoot, { recursive: true });
@@ -70,6 +55,27 @@ describe("platform-upgrader apply scaffold-v2", () => {
           path.join(tempRoot, "electron-template", "scripts", "dispatch-monorepo-update.mjs"),
         ),
       ).toBe(false);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("platform-upgrader audit", () => {
+  it("passes against migrated fixture repos without mutating them", async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "platform-upgrader-audit-"));
+
+    try {
+      for (const repoName of fixtureRepoNames) {
+        const sourceRoot = path.join(repoRoot, "tests", "fixtures", repoName);
+        const targetRoot = path.join(tempRoot, repoName);
+        await cp(sourceRoot, targetRoot, { recursive: true });
+        applyScaffoldV2(targetRoot);
+
+        const result = auditRepo(targetRoot);
+        expect(result.ok).toBe(true);
+        expect(result.issues).toEqual([]);
+      }
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

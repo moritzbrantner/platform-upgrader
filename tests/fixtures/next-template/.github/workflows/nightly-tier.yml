@@ -1,0 +1,11 @@
+name: Nightly Tier
+
+on:
+  push:
+    branches: [nightly]
+
+jobs:
+  nightly-tier:
+    runs-on: ubuntu-latest
+    steps:
+      - run: bun run checks:nightly

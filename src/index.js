@@ -190,6 +190,41 @@ jobs:
 `;
   }
 
+  if (workflowName === "beta-tier.yml" || workflowName === "main-tier.yml" || workflowName === "nightly-tier.yml") {
+    const workflowLabel = workflowName === "beta-tier.yml"
+      ? "Beta Tier"
+      : workflowName === "main-tier.yml"
+        ? "Main Tier"
+        : "Nightly Tier";
+    const branchName = workflowName.replace(".yml", "");
+    const checksCommand = workflowName === "beta-tier.yml"
+      ? "bun run checks:beta"
+      : workflowName === "main-tier.yml"
+        ? "bun run checks:main"
+        : "bun run checks:nightly";
+
+    contents = `name: ${workflowLabel}
+
+on:
+  pull_request:
+    branches: [${branchName.replace("-tier", "")}]
+  push:
+    branches: [${branchName.replace("-tier", "")}]
+
+jobs:
+  ${branchName}:
+    name: ${workflowLabel}
+    permissions:
+      contents: read
+      packages: read
+    uses: ${PINNED_REF}/validate-repo.yml@${PINNED_TAG}
+    with:
+      test_command: ${checksCommand}
+    secrets:
+      node_auth_token: \${{ secrets.GH_PACKAGES_TOKEN }}
+`;
+  }
+
   if (workflowName === "release.yml") {
     contents = `name: Release
 
@@ -386,7 +421,16 @@ export function applyScaffoldV2(repoRoot) {
     }
   }
 
-  for (const workflowName of ["validate.yml", "ci.yml", "main.yml", "release.yml", "snapshot-stage.yml"]) {
+  for (const workflowName of [
+    "validate.yml",
+    "ci.yml",
+    "main.yml",
+    "release.yml",
+    "snapshot-stage.yml",
+    "beta-tier.yml",
+    "main-tier.yml",
+    "nightly-tier.yml",
+  ]) {
     if (normalizeWorkflow(repoRoot, workflowName)) {
       changes.push(`.github/workflows/${workflowName}`);
     }
