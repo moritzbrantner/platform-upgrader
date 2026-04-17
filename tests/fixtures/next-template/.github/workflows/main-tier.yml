@@ -1,0 +1,11 @@
+name: Main Tier
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  main-tier:
+    runs-on: ubuntu-latest
+    steps:
+      - run: bun run checks:main

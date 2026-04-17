@@ -1,0 +1,11 @@
+name: Beta Tier
+
+on:
+  push:
+    branches: [beta]
+
+jobs:
+  beta-tier:
+    runs-on: ubuntu-latest
+    steps:
+      - run: bun run checks:beta
