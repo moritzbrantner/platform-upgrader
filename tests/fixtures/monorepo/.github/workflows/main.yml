@@ -1,0 +1,11 @@
+name: Main
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - run: bun run test

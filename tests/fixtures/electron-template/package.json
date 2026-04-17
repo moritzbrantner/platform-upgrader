@@ -1,0 +1,7 @@
+{
+  "name": "electron-template",
+  "scripts": {
+    "sync:monorepo": "node ./scripts/dispatch-monorepo-update.mjs",
+    "test:e2e": "playwright test e2e/example.e2e.ts"
+  }
+}

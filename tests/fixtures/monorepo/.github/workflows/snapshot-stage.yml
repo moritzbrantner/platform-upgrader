@@ -1,0 +1,4 @@
+name: Snapshot Stage
+
+on:
+  workflow_call:

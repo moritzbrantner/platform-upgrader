@@ -1,0 +1,7 @@
+{
+  "templateFamily": "next-expo-electron",
+  "enabledApps": ["desktop"],
+  "packageScope": "@moritzbrantner",
+  "migrationsAccepted": ["scaffold-v2"],
+  "workflowMode": "pinned-reusable"
+}
