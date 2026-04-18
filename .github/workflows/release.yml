@@ -14,4 +14,4 @@ jobs:
     with:
       validate_command: bun run test
       release_type: package
-      release_command: npm publish
+      release_command: bun run release:publish
