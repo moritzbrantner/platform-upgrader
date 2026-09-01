@@ -11,6 +11,7 @@ It creates or repairs `scripts/codex-environment.sh`, which:
 - installs declared apt prerequisites during cold setup;
 - installs the exact Bun version from `package.json#packageManager`;
 - installs the exact Rust toolchain/components from `rust-toolchain.toml`;
+- publishes installed Bun/Cargo bin directories through `GITHUB_PATH` when invoked from GitHub Actions so later workflow steps observe the prepared environment;
 - runs setup or maintenance commands declared by the repository;
 - preflights observed Bun/Rust versions against the exact native pins.
 
