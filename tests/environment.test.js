@@ -57,7 +57,7 @@ describe("environment-v1", () => {
         "utf8",
       );
       expect(combinedConfig).toContain("bun install --frozen-lockfile");
-      expect(combinedConfig).toContain("cargo fetch");
+      expect(combinedConfig).toContain("cargo fetch --locked");
       expect(ENVIRONMENT_SCRIPT).toContain("GITHUB_PATH");
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
