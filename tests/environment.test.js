@@ -110,6 +110,7 @@ paths = ["~/.cargo", "~/.bun/install/cache"]
       expect(await readFile(path.join(repo, "scripts", "codex-environment.sh"), "utf8")).toBe(
         ENVIRONMENT_SCRIPT,
       );
+      expect(ENVIRONMENT_SCRIPT).not.toContain("source-deps");
       expect(auditEnvironmentV1(repo)).toEqual({ issues: [], ok: true });
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
