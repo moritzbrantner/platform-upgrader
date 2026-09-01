@@ -158,17 +158,6 @@ PY
   done
 fi
 
-if [[ -f "$root/.coding-tooling.source-deps.json" ]]; then
-  if [[ -x "$root/scripts/source-deps" || -f "$root/scripts/source-deps" ]]; then
-    bash "$root/scripts/source-deps" activate
-  elif command -v coding-tooling >/dev/null 2>&1; then
-    coding-tooling source-deps activate
-  else
-    printf 'source dependency declaration exists but no activator is available\n' >&2
-    exit 2
-  fi
-fi
-
 mapfile -t environment_commands < <(python3 - "$config" "$mode" <<'PY'
 import sys, tomllib
 with open(sys.argv[1], 'rb') as handle:
