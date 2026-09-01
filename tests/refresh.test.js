@@ -76,7 +76,7 @@ describe("latest-stable refresh", () => {
     }
   });
 
-  it("suppresses the same failed candidate only for the tested repository revision", async () => {
+  it("suppresses a held candidate until compatibility-relevant repository content changes", async () => {
     const repo = await makeRepo({ "package.json": '{"packageManager":"bun@1.3.14"}\n' });
     try {
       applyEnvironmentV1(repo);
@@ -87,20 +87,29 @@ describe("latest-stable refresh", () => {
         reason: "full gate failed",
       });
 
-      const held = await refreshLatestStable(repo, {
+      const heldAtSameRevision = await refreshLatestStable(repo, {
         resolvers: { bun: resolvers.bun },
         repositoryRevision: revisionA,
       });
-      expect(held.changedFiles).toEqual([]);
-      expect(held.proposals[0].status).toBe("held");
-      expect(await readFile(path.join(repo, "package.json"), "utf8")).toContain("bun@1.3.14");
+      expect(heldAtSameRevision.changedFiles).toEqual([]);
+      expect(heldAtSameRevision.proposals[0].status).toBe("held");
 
-      const retried = await refreshLatestStable(repo, {
+      const heldAfterMetadataOnlyChange = await refreshLatestStable(repo, {
         resolvers: { bun: resolvers.bun },
         repositoryRevision: revisionB,
+        compatibilityChangedSince: () => false,
       });
-      expect(retried.changedFiles).toEqual(["package.json"]);
-      expect(retried.proposals[0].status).toBe("updated");
+      expect(heldAfterMetadataOnlyChange.changedFiles).toEqual([]);
+      expect(heldAfterMetadataOnlyChange.proposals[0].status).toBe("held");
+      expect(await readFile(path.join(repo, "package.json"), "utf8")).toContain("bun@1.3.14");
+
+      const retriedAfterSourceChange = await refreshLatestStable(repo, {
+        resolvers: { bun: resolvers.bun },
+        repositoryRevision: revisionB,
+        compatibilityChangedSince: () => true,
+      });
+      expect(retriedAfterSourceChange.changedFiles).toEqual(["package.json"]);
+      expect(retriedAfterSourceChange.proposals[0].status).toBe("updated");
     } finally {
       await rm(repo, { recursive: true, force: true });
     }
