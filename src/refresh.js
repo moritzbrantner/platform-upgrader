@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -42,6 +42,27 @@ function currentRevision(repoRoot) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   }).trim();
+}
+
+export function repositoryCompatibilityChangedSince(repoRoot, testedRevision, current) {
+  if (testedRevision === current) return false;
+  const result = spawnSync(
+    "git",
+    [
+      "-C",
+      repoRoot,
+      "diff",
+      "--quiet",
+      `${testedRevision}..${current}`,
+      "--",
+      ".",
+      ":(exclude).repository-environment.toml",
+    ],
+    { stdio: "ignore" },
+  );
+  // git diff --quiet returns 0 for no relevant changes and 1 for changes.
+  // Any other result is treated conservatively as changed so a stale hold cannot mask compatibility work.
+  return result.status !== 0;
 }
 
 function nativePins(repoRoot) {
@@ -186,6 +207,7 @@ export async function refreshLatestStable(
   {
     resolvers = { bun: resolveLatestBun, rust: resolveLatestRust },
     repositoryRevision = null,
+    compatibilityChangedSince = repositoryCompatibilityChangedSince,
   } = {},
 ) {
   const pins = nativePins(repoRoot);
@@ -222,7 +244,11 @@ export async function refreshLatestStable(
     }
 
     const hold = readCompatibilityHold(repoRoot, pin.tool);
-    if (hold?.candidate === latest.version && hold.testedRevision === revision) {
+    const heldAgainstEquivalentRevision =
+      hold?.candidate === latest.version &&
+      (hold.testedRevision === revision ||
+        !compatibilityChangedSince(repoRoot, hold.testedRevision, revision));
+    if (heldAgainstEquivalentRevision) {
       proposals.push({
         tool: pin.tool,
         oldVersion: pin.version,
