@@ -32,7 +32,7 @@ function detectedEnvironment(repoRoot) {
   }
 
   if (existsSync(path.join(repoRoot, "rust-toolchain.toml"))) {
-    setup.push("cargo fetch");
+    setup.push("cargo fetch --locked");
     cache.push("~/.cargo");
   }
 
