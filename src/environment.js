@@ -65,10 +65,12 @@ function renderEnvironmentConfig(repoRoot) {
   return `${lines.join("\n")}\n`;
 }
 
+const DOLLAR = "$";
+
 export const ENVIRONMENT_SCRIPT = String.raw`#!/usr/bin/env bash
 set -euo pipefail
 
-mode="${1:-setup}"
+mode="${DOLLAR}{1:-setup}"
 if [[ "$mode" != "setup" && "$mode" != "maintenance" ]]; then
   printf 'usage: %s [setup|maintenance]\n' "$0" >&2
   exit 2
@@ -99,9 +101,9 @@ for package in data.get('system', {}).get('apt', []):
     print(package)
 PY
   )
-  if (( ${#apt_packages[@]} )); then
+  if (( ${DOLLAR}{#apt_packages[@]} )); then
     run_privileged apt-get update
-    run_privileged apt-get install -y --no-install-recommends "${apt_packages[@]}"
+    run_privileged apt-get install -y --no-install-recommends "${DOLLAR}{apt_packages[@]}"
   fi
 fi
 
@@ -120,7 +122,7 @@ if [[ -n "$desired_bun" ]]; then
     exit 2
   fi
   if ! command -v bun >/dev/null 2>&1 || [[ "$(bun --version)" != "$desired_bun" ]]; then
-    curl -fsSL https://bun.sh/install | bash -s "bun-v${desired_bun}"
+    curl -fsSL https://bun.sh/install | bash -s "bun-v${DOLLAR}{desired_bun}"
   fi
   export PATH="$HOME/.bun/bin:$PATH"
 fi
@@ -143,6 +145,17 @@ if [[ -n "$rust_toolchain" ]]; then
     export PATH="$HOME/.cargo/bin:$PATH"
   fi
   rustup toolchain install "$rust_toolchain" --profile minimal
+  mapfile -t rust_components < <(python3 - "$root/rust-toolchain.toml" <<'PY'
+import pathlib, sys, tomllib
+path = pathlib.Path(sys.argv[1])
+if path.is_file():
+    for component in tomllib.loads(path.read_text()).get('toolchain', {}).get('components', []):
+        print(component)
+PY
+  )
+  for component in "${DOLLAR}{rust_components[@]}"; do
+    rustup component add --toolchain "$rust_toolchain" "$component"
+  done
 fi
 
 if [[ -f "$root/.coding-tooling.source-deps.json" ]]; then
@@ -164,7 +177,7 @@ for command in data.get(sys.argv[2], {}).get('commands', []):
     print(command)
 PY
 )
-for command in "${environment_commands[@]}"; do
+for command in "${DOLLAR}{environment_commands[@]}"; do
   (cd "$root" && bash -lc "$command")
 done
 
