@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 
 import { applyEnvironmentV1, auditEnvironmentV1 } from "./environment.js";
+import { applyBoringFoundationV1, auditBoringFoundationV1 } from "./foundation.js";
 import { applyScaffoldV2, auditRepo } from "./index.js";
 import {
   clearCompatibilityHold,
@@ -20,6 +21,12 @@ const args = process.argv.slice(2);
 const [command, first, second] = args;
 
 if (command === "audit") {
+  if (first === "boring-foundation-v1") {
+    const result = auditBoringFoundationV1(resolveRepoRoot(second));
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(result.safeToApply ? 0 : 1);
+  }
+
   const repoRoot = resolveRepoRoot(first);
   const environment = auditEnvironmentV1(repoRoot);
   const hasScaffoldConfig = existsSync(path.join(repoRoot, ".platform-upgrader.json"));
@@ -44,11 +51,18 @@ if (command === "apply") {
     result = applyScaffoldV2(repoRoot);
   } else if (first === "environment-v1") {
     result = applyEnvironmentV1(repoRoot);
+  } else if (first === "boring-foundation-v1") {
+    result = applyBoringFoundationV1(repoRoot);
   } else {
-    console.error('Supported migrations are "scaffold-v2" and "environment-v1".');
+    console.error(
+      'Supported migrations are "scaffold-v2", "environment-v1", and "boring-foundation-v1".',
+    );
     process.exit(1);
   }
   console.log(JSON.stringify(result, null, 2));
+  if (first === "boring-foundation-v1") {
+    process.exit(result.audit.safeToApply ? 0 : 1);
+  }
   process.exit(result.audit && !result.audit.ok ? 1 : 0);
 }
 
@@ -85,6 +99,6 @@ if (command === "hold" && first === "clear") {
 }
 
 console.error(
-  "Usage: platform-upgrader <audit [path] | apply <scaffold-v2|environment-v1> [path] | refresh latest-stable [path] | hold <record|clear> ...>",
+  "Usage: platform-upgrader <audit [boring-foundation-v1] [path] | apply <scaffold-v2|environment-v1|boring-foundation-v1> [path] | refresh latest-stable [path] | hold <record|clear> ...>",
 );
 process.exit(1);
