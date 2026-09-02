@@ -309,7 +309,7 @@ if (( skip_reconciliation )); then
   printf 'environment-v1: maintenance inputs unchanged; skipping %d reconciliation command(s)\n' "${DOLLAR}{#environment_commands[@]}"
 else
   for command in "${DOLLAR}{environment_commands[@]}"; do
-    (cd "$root" && bash -lc "$command")
+    (cd "$root" && bash -c "$command")
   done
 fi
 
