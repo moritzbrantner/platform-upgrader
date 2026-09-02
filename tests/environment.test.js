@@ -22,19 +22,21 @@ async function makeRepo(root, name, files) {
 }
 
 describe("environment-v1", () => {
-  it("creates deterministic idempotent Bun, Rust, and combined environments", async () => {
+  it("creates deterministic idempotent Bun, Node, Rust, and combined environments", async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), "platform-env-v1-"));
     try {
       const cases = [
         ["bun-only", { "package.json": '{"packageManager":"bun@1.4.0"}\n' }],
+        ["node-only", { ".node-version": "24.20.0\n" }],
         [
           "rust-only",
           { "rust-toolchain.toml": '[toolchain]\nchannel = "1.98.0"\ncomponents = ["clippy", "rustfmt"]\n' },
         ],
         [
-          "bun-rust",
+          "bun-node-rust",
           {
             "package.json": '{"packageManager":"bun@1.4.0"}\n',
+            ".node-version": "24.20.0\n",
             "rust-toolchain.toml": '[toolchain]\nchannel = "1.98.0"\n',
           },
         ],
@@ -53,12 +55,17 @@ describe("environment-v1", () => {
       }
 
       const combinedConfig = await readFile(
-        path.join(tempRoot, "bun-rust", ".repository-environment.toml"),
+        path.join(tempRoot, "bun-node-rust", ".repository-environment.toml"),
         "utf8",
       );
       expect(combinedConfig).toContain("bun install --frozen-lockfile");
       expect(combinedConfig).toContain("cargo fetch --locked");
       expect(ENVIRONMENT_SCRIPT).toContain("GITHUB_PATH");
+      expect(ENVIRONMENT_SCRIPT).toContain(".node-version");
+      expect(ENVIRONMENT_SCRIPT).not.toContain("https://bun.sh/install");
+      expect(ENVIRONMENT_SCRIPT).not.toContain("https://sh.rustup.rs");
+      expect(ENVIRONMENT_SCRIPT).not.toContain("| bash");
+      expect(ENVIRONMENT_SCRIPT).not.toContain("| sh");
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -123,6 +130,7 @@ paths = ["~/.cargo", "~/.bun/install/cache"]
     try {
       const repo = await makeRepo(tempRoot, "drift", {
         "package.json": '{"packageManager":"bun@latest"}\n',
+        ".node-version": "24\n",
         "rust-toolchain.toml": '[toolchain]\nchannel = "stable"\n',
       });
       applyEnvironmentV1(repo);
@@ -132,6 +140,7 @@ paths = ["~/.cargo", "~/.bun/install/cache"]
       expect(result.ok).toBe(false);
       expect(result.issues).toContain("scripts/codex-environment.sh has environment-v1 scaffold drift");
       expect(result.issues.some((issue) => issue.includes("packageManager must pin Bun exactly"))).toBe(true);
+      expect(result.issues.some((issue) => issue.includes(".node-version must pin Node exactly"))).toBe(true);
       expect(result.issues.some((issue) => issue.includes("must pin Rust exactly"))).toBe(true);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
