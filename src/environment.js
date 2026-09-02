@@ -127,11 +127,42 @@ if [[ -n "$desired_bun" ]]; then
     printf 'Bun packageManager must use an exact version, got %s\n' "$desired_bun" >&2
     exit 2
   fi
-  if ! command -v bun >/dev/null 2>&1 || [[ "$(bun --version)" != "$desired_bun" ]]; then
-    curl -fsSL https://bun.sh/install | bash -s "bun-v${DOLLAR}{desired_bun}"
+  if ! command -v bun >/dev/null 2>&1; then
+    printf 'Bun %s is required but is not installed; provision the exact version with a trusted pinned environment mechanism before running this script\n' "$desired_bun" >&2
+    exit 2
   fi
-  export PATH="$HOME/.bun/bin:$PATH"
-  publish_path "$HOME/.bun/bin"
+  if [[ "$(bun --version)" != "$desired_bun" ]]; then
+    printf 'Bun preflight mismatch: expected %s, got %s\n' "$desired_bun" "$(bun --version)" >&2
+    exit 1
+  fi
+  if [[ -d "$HOME/.bun/bin" ]]; then
+    export PATH="$HOME/.bun/bin:$PATH"
+    publish_path "$HOME/.bun/bin"
+  fi
+fi
+
+desired_node="$(python3 - "$root/.node-version" <<'PY'
+import pathlib, sys
+path = pathlib.Path(sys.argv[1])
+if path.is_file():
+    print(path.read_text().strip())
+PY
+)"
+if [[ -n "$desired_node" ]]; then
+  if ! [[ "$desired_node" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    printf '.node-version must use an exact version, got %s\n' "$desired_node" >&2
+    exit 2
+  fi
+  if ! command -v node >/dev/null 2>&1; then
+    printf 'Node %s is required but is not installed; provision the exact version with a trusted pinned environment mechanism before running this script\n' "$desired_node" >&2
+    exit 2
+  fi
+  observed_node="$(node --version)"
+  observed_node="${DOLLAR}{observed_node#v}"
+  if [[ "$observed_node" != "$desired_node" ]]; then
+    printf 'Node preflight mismatch: expected %s, got %s\n' "$desired_node" "$observed_node" >&2
+    exit 1
+  fi
 fi
 
 rust_toolchain="$(python3 - "$root/rust-toolchain.toml" <<'PY'
@@ -148,10 +179,11 @@ if [[ -n "$rust_toolchain" ]]; then
     exit 2
   fi
   if ! command -v rustup >/dev/null 2>&1; then
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
-    export PATH="$HOME/.cargo/bin:$PATH"
+    printf 'rustup is required to provision Rust %s; install rustup through a trusted pinned environment mechanism before running this script\n' "$rust_toolchain" >&2
+    exit 2
   fi
   if [[ -d "$HOME/.cargo/bin" ]]; then
+    export PATH="$HOME/.cargo/bin:$PATH"
     publish_path "$HOME/.cargo/bin"
   fi
   rustup toolchain install "$rust_toolchain" --profile minimal
@@ -184,6 +216,14 @@ if [[ -n "$desired_bun" && "$(bun --version)" != "$desired_bun" ]]; then
   printf 'Bun preflight mismatch: expected %s, got %s\n' "$desired_bun" "$(bun --version)" >&2
   exit 1
 fi
+if [[ -n "$desired_node" ]]; then
+  observed_node="$(node --version)"
+  observed_node="${DOLLAR}{observed_node#v}"
+  if [[ "$observed_node" != "$desired_node" ]]; then
+    printf 'Node preflight mismatch: expected %s, got %s\n' "$desired_node" "$observed_node" >&2
+    exit 1
+  fi
+fi
 if [[ -n "$rust_toolchain" ]]; then
   observed_rust="$(cd "$root" && rustc --version | awk '{print $2}')"
   if [[ "$observed_rust" != "$rust_toolchain" ]]; then
@@ -201,6 +241,15 @@ function exactBunPinIssue(repoRoot) {
   return /^bun@\d+\.\d+\.\d+$/.test(packageManager)
     ? null
     : `package.json packageManager must pin Bun exactly, got ${packageManager}`;
+}
+
+function exactNodePinIssue(repoRoot) {
+  const nodeVersionPath = path.join(repoRoot, ".node-version");
+  if (!existsSync(nodeVersionPath)) return null;
+  const version = readText(nodeVersionPath).trim();
+  return /^\d+\.\d+\.\d+$/.test(version)
+    ? null
+    : `.node-version must pin Node exactly, got ${version}`;
 }
 
 function exactRustPinIssue(repoRoot) {
@@ -237,7 +286,11 @@ export function auditEnvironmentV1(repoRoot) {
     issues.push("scripts/codex-environment.sh has environment-v1 scaffold drift");
   }
 
-  for (const issue of [exactBunPinIssue(repoRoot), exactRustPinIssue(repoRoot)]) {
+  for (const issue of [
+    exactBunPinIssue(repoRoot),
+    exactNodePinIssue(repoRoot),
+    exactRustPinIssue(repoRoot),
+  ]) {
     if (issue) issues.push(issue);
   }
 
