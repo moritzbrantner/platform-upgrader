@@ -128,6 +128,7 @@ printf '%s\\n' "$*" >> "\${ENV_ACTIONS:?}"
 
       const env = {
         ...process.env,
+        HOME: tempRoot,
         PATH: `${bin}${path.delimiter}${process.env.PATH ?? ""}`,
         BUN_FAKE_VERSION: Bun.version,
         ENV_ACTIONS: actions,
