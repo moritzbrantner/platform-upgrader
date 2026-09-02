@@ -121,7 +121,7 @@ PY
   )
   missing_apt_packages=()
   for package in "${DOLLAR}{apt_packages[@]}"; do
-    if command -v dpkg-query >/dev/null 2>&1 && dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -qx 'install ok installed'; then
+    if command -v dpkg >/dev/null 2>&1 && dpkg -s "$package" >/dev/null 2>&1; then
       continue
     fi
     missing_apt_packages+=("$package")
