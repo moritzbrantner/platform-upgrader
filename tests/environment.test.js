@@ -1,4 +1,5 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -19,6 +20,12 @@ async function makeRepo(root, name, files) {
     await writeFile(filePath, contents, "utf8");
   }
   return repo;
+}
+
+function run(command, args, cwd, env = process.env) {
+  const result = spawnSync(command, args, { cwd, encoding: "utf8", env });
+  expect(result.status, `${command} ${args.join(" ")}\n${result.stderr}`).toBe(0);
+  return result;
 }
 
 describe("environment-v1", () => {
@@ -62,10 +69,92 @@ describe("environment-v1", () => {
       expect(combinedConfig).toContain("cargo fetch --locked");
       expect(ENVIRONMENT_SCRIPT).toContain("GITHUB_PATH");
       expect(ENVIRONMENT_SCRIPT).toContain(".node-version");
+      expect(ENVIRONMENT_SCRIPT).toContain("environment-v1-maintenance.sha256");
+      expect(ENVIRONMENT_SCRIPT).toContain("maintenance inputs unchanged");
+      expect(ENVIRONMENT_SCRIPT).toContain('bash -c "$command"');
+      expect(ENVIRONMENT_SCRIPT).not.toContain('bash -lc "$command"');
       expect(ENVIRONMENT_SCRIPT).not.toContain("https://bun.sh/install");
       expect(ENVIRONMENT_SCRIPT).not.toContain("https://sh.rustup.rs");
       expect(ENVIRONMENT_SCRIPT).not.toContain("| bash");
       expect(ENVIRONMENT_SCRIPT).not.toContain("| sh");
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("makes unchanged maintenance a comparable zero-reconciliation path", async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "platform-env-compare-"));
+    try {
+      const repo = await makeRepo(tempRoot, "compare", {
+        "package.json": `${JSON.stringify({ packageManager: `bun@${Bun.version}` })}\n`,
+        "README.md": "baseline\n",
+      });
+      applyEnvironmentV1(repo);
+
+      const bin = path.join(tempRoot, "bin");
+      const actions = path.join(tempRoot, "actions.log");
+      await mkdir(bin, { recursive: true });
+      const fakeBun = path.join(bin, "bun");
+      await writeFile(
+        fakeBun,
+        `#!/usr/bin/env bash
+set -euo pipefail
+if [[ "\${1:-}" == "--version" ]]; then
+  printf '%s\\n' "\${BUN_FAKE_VERSION:?}"
+  exit 0
+fi
+printf '%s\\n' "$*" >> "\${ENV_ACTIONS:?}"
+`,
+        "utf8",
+      );
+      await chmod(fakeBun, 0o755);
+      await chmod(path.join(repo, "scripts", "codex-environment.sh"), 0o755);
+
+      run("git", ["init", "-q"], repo);
+      run("git", ["add", "."], repo);
+      run(
+        "git",
+        [
+          "-c",
+          "user.name=environment-v1-test",
+          "-c",
+          "user.email=environment-v1@example.invalid",
+          "commit",
+          "-qm",
+          "baseline",
+        ],
+        repo,
+      );
+
+      const env = {
+        ...process.env,
+        HOME: tempRoot,
+        PATH: `${bin}${path.delimiter}${process.env.PATH ?? ""}`,
+        BUN_FAKE_VERSION: Bun.version,
+        ENV_ACTIONS: actions,
+      };
+      run("bash", ["scripts/codex-environment.sh", "setup"], repo, env);
+      expect((await readFile(actions, "utf8")).trim().split("\n")).toEqual([
+        "install --frozen-lockfile",
+      ]);
+
+      const unchanged = run("bash", ["scripts/codex-environment.sh", "maintenance"], repo, env);
+      expect(unchanged.stdout).toContain("skipping 1 reconciliation command(s)");
+      expect((await readFile(actions, "utf8")).trim().split("\n")).toHaveLength(1);
+
+      await writeFile(path.join(repo, "README.md"), "unrelated change\n", "utf8");
+      const unrelated = run("bash", ["scripts/codex-environment.sh", "maintenance"], repo, env);
+      expect(unrelated.stdout).toContain("skipping 1 reconciliation command(s)");
+      expect((await readFile(actions, "utf8")).trim().split("\n")).toHaveLength(1);
+
+      await writeFile(
+        path.join(repo, "package.json"),
+        `${JSON.stringify({ packageManager: `bun@${Bun.version}`, description: "environment input changed" })}\n`,
+        "utf8",
+      );
+      const changed = run("bash", ["scripts/codex-environment.sh", "maintenance"], repo, env);
+      expect(changed.stdout).not.toContain("maintenance inputs unchanged");
+      expect((await readFile(actions, "utf8")).trim().split("\n")).toHaveLength(2);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
