@@ -17,7 +17,7 @@
   },
   "scripts": {
     "release:publish": "node scripts/publish-package.mjs",
-    "test": "bun test ./tests/platform-upgrader.test.js ./tests/environment.test.js ./tests/foundation.test.js ./tests/refresh.test.js ./tests/cli.test.js"
+    "test": "bun test ./tests/platform-upgrader.test.js ./tests/environment.test.js ./tests/foundation.test.js ./tests/refresh.test.js ./tests/cli.test.js ./tests/reconciliation.test.js"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
