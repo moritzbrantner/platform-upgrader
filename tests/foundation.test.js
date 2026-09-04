@@ -91,6 +91,48 @@ describe("boring-foundation-v1", () => {
     ]);
   });
 
+  test("preserves a structurally valid existing environment-v1 composition across scaffold evolution", () => {
+    const root = fixture();
+    const config = `schema_version = 1
+
+[policy]
+track = "latest-stable"
+
+[system]
+apt = []
+
+[setup]
+commands = []
+
+[maintenance]
+commands = []
+
+[cache]
+paths = []
+
+[compatibility_holds]
+`;
+    const existingScript = `#!/usr/bin/env bash
+set -euo pipefail
+mode="\${1:-setup}"
+if [[ "$mode" != "setup" && "$mode" != "maintenance" ]]; then exit 2; fi
+`;
+    write(root, ".repository-environment.toml", config);
+    write(root, "scripts/codex-environment.sh", existingScript);
+
+    const audit = auditBoringFoundationV1(root);
+    const result = applyBoringFoundationV1(root);
+
+    expect(audit.safeToApply).toBe(true);
+    expect(audit.components.environment).toEqual({
+      status: "valid",
+      reason: "environment-v1-existing-composition-preserved",
+      scaffoldDrift: true,
+    });
+    expect(result.changed).not.toContain("scripts/codex-environment.sh");
+    expect(read(root, "scripts/codex-environment.sh")).toBe(existingScript);
+  });
+
   test("refuses to overwrite a custom partial environment contract", () => {
     const root = fixture();
     write(root, "scripts/codex-environment.sh", "#!/usr/bin/env bash\necho custom\n");
@@ -104,6 +146,28 @@ describe("boring-foundation-v1", () => {
     expect(result.changed).toEqual([]);
     expect(read(root, "scripts/codex-environment.sh")).toBe(before);
     expect(existsSync(path.join(root, ".repository-environment.toml"))).toBe(false);
+  });
+
+  test("rejects a malformed existing environment script even when config is complete", () => {
+    const root = fixture();
+    write(
+      root,
+      ".repository-environment.toml",
+      `schema_version = 1
+
+[policy]
+track = "latest-stable"
+`,
+    );
+    write(root, "scripts/codex-environment.sh", "#!/bin/sh\necho custom\n");
+
+    const audit = auditBoringFoundationV1(root);
+
+    expect(audit.safeToApply).toBe(false);
+    expect(audit.components.environment.status).toBe("conflict");
+    expect(audit.components.environment.issues).toContain(
+      "scripts/codex-environment.sh does not expose the environment-v1 setup/maintenance contract",
+    );
   });
 
   test("preserves richer coding-tooling and repository guidance", () => {

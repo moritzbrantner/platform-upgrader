@@ -6,6 +6,9 @@ import { ENVIRONMENT_SCRIPT, applyEnvironmentV1, auditEnvironmentV1 } from "./en
 export const BORING_FOUNDATION_VERSION = "boring-foundation-v1";
 export const RENOVATE_PRESET = "github>moritzbrantner/coding-agent-conventions";
 
+const ENVIRONMENT_SCAFFOLD_DRIFT =
+  "scripts/codex-environment.sh has environment-v1 scaffold drift";
+
 function readText(filePath) {
   return readFileSync(filePath, "utf8");
 }
@@ -27,6 +30,18 @@ function result(status, reason, extra = {}) {
   return { status, reason, ...extra };
 }
 
+function existingEnvironmentScriptContractIssue(scriptPath) {
+  const source = readText(scriptPath);
+  if (
+    source.startsWith("#!/usr/bin/env bash\n") &&
+    source.includes('"setup"') &&
+    source.includes('"maintenance"')
+  ) {
+    return null;
+  }
+  return "scripts/codex-environment.sh does not expose the environment-v1 setup/maintenance contract";
+}
+
 function auditEnvironment(repoRoot) {
   const configPath = path.join(repoRoot, ".repository-environment.toml");
   const scriptPath = path.join(repoRoot, "scripts", "codex-environment.sh");
@@ -42,18 +57,34 @@ function auditEnvironment(repoRoot) {
     return result("valid", "environment-v1-valid");
   }
 
-  const nonMissingIssues = audit.issues.filter(
-    (issue) =>
-      issue !== ".repository-environment.toml is missing" &&
-      issue !== "scripts/codex-environment.sh is missing",
-  );
+  // Partial adoption remains conservative. A canonical half may be completed,
+  // but an older/custom script without its matching config is ambiguous.
+  if (!hasConfig || !hasScript) {
+    const nonMissingIssues = audit.issues.filter(
+      (issue) =>
+        issue !== ".repository-environment.toml is missing" &&
+        issue !== "scripts/codex-environment.sh is missing",
+    );
+    if (nonMissingIssues.length === 0) {
+      return result("incomplete", "environment-v1-partial", { issues: audit.issues });
+    }
+    return result("conflict", "environment-v1-existing-state-invalid", {
+      issues: audit.issues,
+    });
+  }
 
-  if (nonMissingIssues.length === 0) {
-    return result("incomplete", "environment-v1-partial", { issues: audit.issues });
+  const scriptContractIssue = existingEnvironmentScriptContractIssue(scriptPath);
+  const blockingIssues = audit.issues.filter((issue) => issue !== ENVIRONMENT_SCAFFOLD_DRIFT);
+  if (scriptContractIssue) blockingIssues.push(scriptContractIssue);
+
+  if (blockingIssues.length === 0) {
+    return result("valid", "environment-v1-existing-composition-preserved", {
+      scaffoldDrift: true,
+    });
   }
 
   return result("conflict", "environment-v1-existing-state-invalid", {
-    issues: audit.issues,
+    issues: [...new Set([...audit.issues, ...blockingIssues])],
   });
 }
 
