@@ -4,6 +4,12 @@ on:
   pull_request:
     paths:
       - .github/workflows/boring-foundation-canary.yml
+      - src/environment.js
+      - src/foundation.js
+      - src/rollout.js
+      - tests/environment.test.js
+      - tests/foundation.test.js
+      - tests/rollout.test.js
   workflow_dispatch:
 
 permissions:
