@@ -92,6 +92,26 @@
     "react-render-budget": {
       "status": "maintained",
       "reason": "active React performance verification library"
+    },
+    "platform-packages": {
+      "status": "maintained",
+      "reason": "maintained transitional package incubator while extraction proceeds"
+    },
+    "moonlight": {
+      "status": "maintained",
+      "reason": "active cross-language runtime and tooling repository"
+    },
+    "flat-stories": {
+      "status": "maintained",
+      "reason": "active React storytelling and vector editor application"
+    },
+    "dotnet-template": {
+      "status": "maintained",
+      "reason": "active canonical .NET template with deterministic validation"
+    },
+    "history-to-md": {
+      "status": "maintained",
+      "reason": "maintained dormant Rust utility with explicit validation hardening"
     }
   }
 }
