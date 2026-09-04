@@ -9,7 +9,8 @@ import {
 } from "node:fs";
 import path from "node:path";
 
-import { BORING_FOUNDATION_VERSION, auditBoringFoundationV1 } from "./foundation.js";
+import { BORING_FOUNDATION_VERSION } from "./foundation.js";
+import { auditBoringFoundationV1 } from "./foundation-authority.js";
 
 export const ROLLOUT_REPORT_SCHEMA_VERSION = 1;
 
@@ -100,10 +101,15 @@ export function detectRepositoryStack(repoRoot) {
   const stack = new Set();
   const packageJson = packageData(repoRoot);
   if (packageJson) {
-    const packageManager = typeof packageJson.packageManager === "string" ? packageJson.packageManager : "";
+    const packageManager =
+      typeof packageJson.packageManager === "string" ? packageJson.packageManager : "";
     stack.add(packageManager.startsWith("bun@") ? "bun" : "node");
-    const dependencies = { ...(packageJson.dependencies ?? {}), ...(packageJson.devDependencies ?? {}) };
-    if (existsSync(path.join(repoRoot, "tsconfig.json")) || dependencies.typescript) stack.add("typescript");
+    const dependencies = {
+      ...(packageJson.dependencies ?? {}),
+      ...(packageJson.devDependencies ?? {}),
+    };
+    if (existsSync(path.join(repoRoot, "tsconfig.json")) || dependencies.typescript)
+      stack.add("typescript");
     if (dependencies.react) stack.add("react");
     if (dependencies.next) stack.add("nextjs");
     if (dependencies.vite) stack.add("vite");
@@ -129,7 +135,8 @@ function packageValidationCommand(repoRoot, packageJson) {
   );
   if (!script) return null;
 
-  const packageManager = typeof packageJson.packageManager === "string" ? packageJson.packageManager : "";
+  const packageManager =
+    typeof packageJson.packageManager === "string" ? packageJson.packageManager : "";
   if (packageManager.startsWith("bun@")) return `bun run ${script}`;
   if (packageManager.startsWith("pnpm@")) return `pnpm run ${script}`;
   if (packageManager.startsWith("yarn@")) return `yarn ${script}`;
@@ -168,14 +175,14 @@ function previousRecords(existingReportPath) {
   return new Map(report.repositories.map((entry) => [entry.name, entry]));
 }
 
-function auditRepository(repoRoot) {
-  const audit = auditBoringFoundationV1(repoRoot);
+function auditRepository(repoRoot, codingToolingRoot) {
+  const audit = auditBoringFoundationV1(repoRoot, { codingToolingRoot });
   const git = repositoryGitState(repoRoot);
   const validation = repositoryValidationCommand(repoRoot);
   const auditedRevision = git?.defaultBranchSha ?? git?.checkedOutSha ?? null;
   const finalStatus = !git
     ? "blocked"
-    : audit.conflicts.length > 0
+    : !audit.safeToApply
       ? "blocked"
       : audit.complete
         ? "complete"
@@ -188,6 +195,7 @@ function auditRepository(repoRoot) {
     git,
     stack: detectRepositoryStack(repoRoot),
     foundation: audit.components,
+    foundationAuthority: audit.authority,
     proposedChanges: audit.pending,
     conflicts: audit.conflicts,
     safeToApply: audit.safeToApply,
@@ -221,7 +229,7 @@ function resumeAcceptedRecord(current, previous) {
 
 export function buildBoringFoundationRolloutReport(
   fleetRoot,
-  { existingReportPath = null, repositoryNames = null } = {},
+  { existingReportPath = null, repositoryNames = null, codingToolingRoot = null } = {},
 ) {
   const root = path.resolve(fleetRoot);
   const previous = previousRecords(existingReportPath);
@@ -229,7 +237,7 @@ export function buildBoringFoundationRolloutReport(
   const repositories = repositoryDirectories(root)
     .filter((repoRoot) => !selected || selected.has(path.basename(repoRoot)))
     .map((repoRoot) => {
-      const current = auditRepository(repoRoot);
+      const current = auditRepository(repoRoot, codingToolingRoot);
       return resumeAcceptedRecord(current, previous.get(current.name));
     });
 
@@ -237,6 +245,7 @@ export function buildBoringFoundationRolloutReport(
     schemaVersion: ROLLOUT_REPORT_SCHEMA_VERSION,
     migration: BORING_FOUNDATION_VERSION,
     fleetRoot: root,
+    codingToolingRoot: codingToolingRoot ? path.resolve(codingToolingRoot) : null,
     repositoryCount: repositories.length,
     repositories,
   };
