@@ -34,6 +34,7 @@ describe("environment-v1", () => {
     try {
       const cases = [
         ["bun-only", { "package.json": '{"packageManager":"bun@1.4.0"}\n' }],
+        ["bun-version-only", { ".bun-version": "1.4.0\n" }],
         ["node-only", { ".node-version": "24.20.0\n" }],
         [
           "rust-only",
@@ -67,7 +68,16 @@ describe("environment-v1", () => {
       );
       expect(combinedConfig).toContain("bun install --frozen-lockfile");
       expect(combinedConfig).toContain("cargo fetch --locked");
+
+      const versionFileConfig = await readFile(
+        path.join(tempRoot, "bun-version-only", ".repository-environment.toml"),
+        "utf8",
+      );
+      expect(versionFileConfig).not.toContain("bun install --frozen-lockfile");
+      expect(versionFileConfig).toContain("~/.bun/install/cache");
+
       expect(ENVIRONMENT_SCRIPT).toContain("GITHUB_PATH");
+      expect(ENVIRONMENT_SCRIPT).toContain(".bun-version");
       expect(ENVIRONMENT_SCRIPT).toContain(".node-version");
       expect(ENVIRONMENT_SCRIPT).toContain("environment-v1-maintenance.sha256");
       expect(ENVIRONMENT_SCRIPT).toContain("maintenance inputs unchanged");
@@ -77,6 +87,37 @@ describe("environment-v1", () => {
       expect(ENVIRONMENT_SCRIPT).not.toContain("https://sh.rustup.rs");
       expect(ENVIRONMENT_SCRIPT).not.toContain("| bash");
       expect(ENVIRONMENT_SCRIPT).not.toContain("| sh");
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts one exact Bun declaration and rejects conflicting or floating pins", async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "platform-env-bun-version-"));
+    try {
+      const matching = await makeRepo(tempRoot, "matching", {
+        "package.json": '{"packageManager":"bun@1.4.0"}\n',
+        ".bun-version": "1.4.0\n",
+      });
+      applyEnvironmentV1(matching);
+      expect(auditEnvironmentV1(matching)).toEqual({ issues: [], ok: true });
+
+      const conflicting = await makeRepo(tempRoot, "conflicting", {
+        "package.json": '{"packageManager":"bun@1.4.0"}\n',
+        ".bun-version": "1.3.14\n",
+      });
+      applyEnvironmentV1(conflicting);
+      expect(auditEnvironmentV1(conflicting).issues).toContain(
+        "Bun pins conflict: package.json declares 1.4.0 but .bun-version declares 1.3.14",
+      );
+
+      const floating = await makeRepo(tempRoot, "floating", {
+        ".bun-version": "latest\n",
+      });
+      applyEnvironmentV1(floating);
+      expect(auditEnvironmentV1(floating).issues).toContain(
+        ".bun-version must pin Bun exactly, got latest",
+      );
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

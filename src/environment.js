@@ -18,17 +18,32 @@ function tomlString(value) {
   return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
 }
 
+function bunPin(repoRoot) {
+  let packageManagerVersion = null;
+  const packagePath = path.join(repoRoot, "package.json");
+  if (existsSync(packagePath)) {
+    const packageManager = readJson(packagePath).packageManager;
+    if (typeof packageManager === "string" && packageManager.startsWith("bun@")) {
+      packageManagerVersion = packageManager.slice("bun@".length);
+    }
+  }
+
+  const bunVersionPath = path.join(repoRoot, ".bun-version");
+  const versionFileVersion = existsSync(bunVersionPath) ? readText(bunVersionPath).trim() : null;
+
+  return { packageManagerVersion, versionFileVersion };
+}
+
 function detectedEnvironment(repoRoot) {
   const setup = [];
   const cache = [];
+  const { packageManagerVersion, versionFileVersion } = bunPin(repoRoot);
 
-  const packagePath = path.join(repoRoot, "package.json");
-  if (existsSync(packagePath)) {
-    const pkg = readJson(packagePath);
-    if (typeof pkg.packageManager === "string" && pkg.packageManager.startsWith("bun@")) {
-      setup.push("bun install --frozen-lockfile");
-      cache.push("~/.bun/install/cache");
-    }
+  if (packageManagerVersion !== null) {
+    setup.push("bun install --frozen-lockfile");
+  }
+  if (packageManagerVersion !== null || versionFileVersion !== null) {
+    cache.push("~/.bun/install/cache");
   }
 
   if (existsSync(path.join(repoRoot, "rust-toolchain.toml"))) {
@@ -132,18 +147,27 @@ PY
   fi
 fi
 
-desired_bun="$(python3 - "$root/package.json" <<'PY'
+desired_bun="$(python3 - "$root/package.json" "$root/.bun-version" <<'PY'
 import json, pathlib, sys
-path = pathlib.Path(sys.argv[1])
-if path.is_file():
-    value = json.loads(path.read_text()).get('packageManager', '')
+package_path = pathlib.Path(sys.argv[1])
+version_path = pathlib.Path(sys.argv[2])
+package_version = None
+if package_path.is_file():
+    value = json.loads(package_path.read_text()).get('packageManager', '')
     if value.startswith('bun@'):
-        print(value.split('@', 1)[1])
+        package_version = value.split('@', 1)[1]
+version_file = version_path.read_text().strip() if version_path.is_file() else None
+if package_version and version_file and package_version != version_file:
+    raise SystemExit(
+        f'Bun pin mismatch: package.json declares {package_version} but .bun-version declares {version_file}'
+    )
+if package_version or version_file:
+    print(package_version or version_file)
 PY
 )"
 if [[ -n "$desired_bun" ]]; then
   if ! [[ "$desired_bun" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    printf 'Bun packageManager must use an exact version, got %s\n' "$desired_bun" >&2
+    printf 'Bun must use an exact version, got %s\n' "$desired_bun" >&2
     exit 2
   fi
   if ! command -v bun >/dev/null 2>&1; then
@@ -253,6 +277,7 @@ tracked = subprocess.run(
 special = {
     '.repository-environment.toml',
     'scripts/codex-environment.sh',
+    '.bun-version',
     '.node-version',
     'rust-toolchain.toml',
     'Cargo.lock',
@@ -340,13 +365,21 @@ fi
 `;
 
 function exactBunPinIssue(repoRoot) {
-  const packagePath = path.join(repoRoot, "package.json");
-  if (!existsSync(packagePath)) return null;
-  const packageManager = readJson(packagePath).packageManager;
-  if (typeof packageManager !== "string" || !packageManager.startsWith("bun@")) return null;
-  return /^bun@\d+\.\d+\.\d+$/.test(packageManager)
-    ? null
-    : `package.json packageManager must pin Bun exactly, got ${packageManager}`;
+  const { packageManagerVersion, versionFileVersion } = bunPin(repoRoot);
+  if (packageManagerVersion !== null && !/^\d+\.\d+\.\d+$/.test(packageManagerVersion)) {
+    return `package.json packageManager must pin Bun exactly, got bun@${packageManagerVersion}`;
+  }
+  if (versionFileVersion !== null && !/^\d+\.\d+\.\d+$/.test(versionFileVersion)) {
+    return `.bun-version must pin Bun exactly, got ${versionFileVersion}`;
+  }
+  if (
+    packageManagerVersion !== null &&
+    versionFileVersion !== null &&
+    packageManagerVersion !== versionFileVersion
+  ) {
+    return `Bun pins conflict: package.json declares ${packageManagerVersion} but .bun-version declares ${versionFileVersion}`;
+  }
+  return null;
 }
 
 function exactNodePinIssue(repoRoot) {
