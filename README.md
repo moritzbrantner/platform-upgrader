@@ -46,6 +46,7 @@ bunx @moritzbrantner/platform-upgrader hold clear bun .
 - environment-v1 reads exact toolchain pins from ecosystem-native repository files rather than duplicating versions
 - latest-stable refresh resolves every declared supported toolchain before writing, emits a machine-readable proposal report, and never writes floating versions
 - refresh proposes candidate pins; the caller's full gate decides acceptance
+- `boring-foundation-v1` can opt into authoritative `coding-tooling foundation audit` evidence through `--coding-tooling-root <path>`; authoritative invalid/unsupported state blocks broad mutation and the audit is repeated after apply
 
 ## Latest-stable sources
 
@@ -61,9 +62,12 @@ A compatibility hold suppresses the same failed candidate only against the repos
 - `src/cli.js`: CLI entrypoint
 - `src/index.js`: scaffold-v2 audit/apply implementation
 - `src/environment.js`: environment-v1 audit/apply and generated Codex setup/maintenance entrypoint
+- `src/foundation.js`: standalone boring-foundation-v1 structural audit/mutation
+- `src/foundation-authority.js`: optional coding-tooling foundation authority adapter
 - `src/refresh.js`: latest-stable discovery, exact-pin proposal, and compatibility-hold helpers
 - `migrations/scaffold-v2.md`: scaffold migration contract notes
 - `migrations/environment-v1.md`: environment migration contract notes
+- `migrations/foundation-authority.md`: authoritative foundation-audit integration contract
 - `migrations/latest-stable.md`: freshness/hold contract notes
 - `.platform-upgrader.json.example`: scaffold-family downstream config example
 - `tests/platform-upgrader.test.js`: scaffold-v2 coverage
