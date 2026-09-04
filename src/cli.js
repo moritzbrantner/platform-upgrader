@@ -5,7 +5,7 @@ import path from "node:path";
 import process from "node:process";
 
 import { applyEnvironmentV1, auditEnvironmentV1 } from "./environment.js";
-import { applyBoringFoundationV1, auditBoringFoundationV1 } from "./foundation.js";
+import { applyBoringFoundationV1, auditBoringFoundationV1 } from "./foundation-authority.js";
 import { applyScaffoldV2, auditRepo } from "./index.js";
 import {
   clearCompatibilityHold,
@@ -29,6 +29,11 @@ function optionValue(values, name) {
   return value && !value.startsWith("--") ? value : null;
 }
 
+function codingToolingRoot(values) {
+  const value = optionValue(values, "coding-tooling-root");
+  return value ? path.resolve(process.cwd(), value) : null;
+}
+
 const args = process.argv.slice(2);
 const [command, first, second] = args;
 
@@ -43,11 +48,11 @@ if (command === "rollout" && first === "plan") {
   const reportOption = optionValue(values, "report");
   if (!reportOption) {
     console.error(
-      "Usage: platform-upgrader rollout plan boring-foundation-v1 [fleet-root] --report <path> [--repos <name,...>]",
+      "Usage: platform-upgrader rollout plan boring-foundation-v1 [fleet-root] --report <path> [--repos <name,...>] [--coding-tooling-root <path>]",
     );
     process.exit(1);
   }
-  const knownFlags = new Set(["--report", "--repos"]);
+  const knownFlags = new Set(["--report", "--repos", "--coding-tooling-root"]);
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
     if (!knownFlags.has(value) || !values[index + 1] || values[index + 1].startsWith("--")) {
@@ -66,6 +71,7 @@ if (command === "rollout" && first === "plan") {
     const report = buildBoringFoundationRolloutReport(resolveRepoRoot(inputPath), {
       existingReportPath: reportPath,
       repositoryNames: repositoryNames?.length ? repositoryNames : null,
+      codingToolingRoot: codingToolingRoot(values),
     });
     writeRolloutReport(reportPath, report);
     console.log(JSON.stringify(report, null, 2));
@@ -112,7 +118,9 @@ if (command === "rollout" && first === "record") {
 
 if (command === "audit") {
   if (first === "boring-foundation-v1") {
-    const result = auditBoringFoundationV1(resolveRepoRoot(second));
+    const result = auditBoringFoundationV1(resolveRepoRoot(second), {
+      codingToolingRoot: codingToolingRoot(args),
+    });
     console.log(JSON.stringify(result, null, 2));
     process.exit(result.safeToApply ? 0 : 1);
   }
@@ -142,7 +150,9 @@ if (command === "apply") {
   } else if (first === "environment-v1") {
     result = applyEnvironmentV1(repoRoot);
   } else if (first === "boring-foundation-v1") {
-    result = applyBoringFoundationV1(repoRoot);
+    result = applyBoringFoundationV1(repoRoot, {
+      codingToolingRoot: codingToolingRoot(args),
+    });
   } else {
     console.error(
       'Supported migrations are "scaffold-v2", "environment-v1", and "boring-foundation-v1".',
@@ -189,6 +199,6 @@ if (command === "hold" && first === "clear") {
 }
 
 console.error(
-  "Usage: platform-upgrader <audit [boring-foundation-v1] [path] | apply <scaffold-v2|environment-v1|boring-foundation-v1> [path] | rollout <plan|record> ... | refresh latest-stable [path] | hold <record|clear> ...>",
+  "Usage: platform-upgrader <audit [boring-foundation-v1] [path] [--coding-tooling-root <path>] | apply <scaffold-v2|environment-v1|boring-foundation-v1> [path] [--coding-tooling-root <path>] | rollout <plan|record> ... | refresh latest-stable [path] | hold <record|clear> ...>",
 );
 process.exit(1);
