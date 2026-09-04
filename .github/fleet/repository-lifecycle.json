@@ -48,6 +48,38 @@
     "dirbase": {
       "status": "maintained",
       "reason": "active Rust data and API tool"
+    },
+    "rect": {
+      "status": "maintained",
+      "reason": "proven boring-foundation canary and active performance lab"
+    },
+    "ecs-lab": {
+      "status": "maintained",
+      "reason": "proven boring-foundation canary and active ECS lab"
+    },
+    "shader-lab": {
+      "status": "maintained",
+      "reason": "proven boring-foundation canary and active shader lab"
+    },
+    "moenarch-foundation": {
+      "status": "maintained",
+      "reason": "proven boring-foundation canary and active shared Rust foundation"
+    },
+    "audio-analysis": {
+      "status": "maintained",
+      "reason": "proven boring-foundation canary and active audio analysis repository"
+    },
+    "ui": {
+      "status": "maintained",
+      "reason": "proven boring-foundation canary and active shared UI library"
+    },
+    "rust-packages": {
+      "status": "maintained",
+      "reason": "proven boring-foundation canary and active Rust package workspace"
+    },
+    "nlp-stack": {
+      "status": "maintained",
+      "reason": "proven boring-foundation canary and active NLP workspace"
     }
   }
 }
