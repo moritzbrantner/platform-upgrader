@@ -41,6 +41,16 @@ function repository(fleetRoot, name, sha) {
   return repoRoot;
 }
 
+function lifecycleManifest(fleetRoot, repositories) {
+  const manifestPath = path.join(fleetRoot, "lifecycle.json");
+  writeFileSync(
+    manifestPath,
+    `${JSON.stringify({ schemaVersion: 1, repositories }, null, 2)}\n`,
+    "utf8",
+  );
+  return manifestPath;
+}
+
 afterEach(() => {
   while (roots.length > 0) rmSync(roots.pop(), { recursive: true, force: true });
 });
@@ -60,6 +70,8 @@ describe("boring foundation rollout report", () => {
     expect(record.auditedRevision).toBe(sha);
     expect(record.stack).toEqual(["bun", "typescript"]);
     expect(record.safeToApply).toBe(true);
+    expect(record.automaticMutationAllowed).toBe(true);
+    expect(record.lifecycle).toEqual({ status: "maintained", reason: null, source: "default" });
     expect(record.proposedChanges.length).toBeGreaterThan(0);
     expect(record.validation.command).toBe("bun run ci");
     expect(record.finalStatus).toBe("planned");
@@ -94,6 +106,67 @@ describe("boring foundation rollout report", () => {
     expect(moved.repositories[0].auditedRevision).toBe(secondSha);
     expect(moved.repositories[0].finalStatus).toBe("planned");
     expect(moved.repositories[0].resumed).toBe(false);
+  });
+
+  test("keeps inactive repositories audited but terminally skipped until explicit reactivation", () => {
+    const fleet = fixture();
+    const reportPath = path.join(fleet, "rollout.json");
+    repository(fleet, "alpha", "6".repeat(40));
+    const lifecyclePath = lifecycleManifest(fleet, {
+      alpha: { status: "retired", reason: "superseded by the maintained template" },
+    });
+
+    const skipped = buildBoringFoundationRolloutReport(fleet, { lifecyclePath });
+    const record = skipped.repositories[0];
+    expect(record.safeToApply).toBe(true);
+    expect(record.proposedChanges.length).toBeGreaterThan(0);
+    expect(record.lifecycle).toEqual({
+      status: "retired",
+      reason: "superseded by the maintained template",
+      source: "manifest",
+    });
+    expect(record.automaticMutationAllowed).toBe(false);
+    expect(record.finalStatus).toBe("skipped");
+
+    writeRolloutReport(reportPath, skipped);
+    expect(() =>
+      recordRolloutResult(reportPath, "alpha", {
+        finalStatus: "accepted",
+        validationStatus: "green",
+      }),
+    ).toThrow("explicit maintained lifecycle status");
+
+    const resumed = buildBoringFoundationRolloutReport(fleet, {
+      existingReportPath: reportPath,
+    });
+    expect(resumed.repositories[0].finalStatus).toBe("skipped");
+    expect(resumed.repositories[0].lifecycle.status).toBe("retired");
+    expect(resumed.repositories[0].automaticMutationAllowed).toBe(false);
+    expect(resumed.repositories[0].resumed).toBe(true);
+
+    lifecycleManifest(fleet, {
+      alpha: { status: "maintained", reason: "reactivated for active development" },
+    });
+    const reactivated = buildBoringFoundationRolloutReport(fleet, {
+      existingReportPath: reportPath,
+      lifecyclePath,
+    });
+    expect(reactivated.repositories[0].lifecycle.status).toBe("maintained");
+    expect(reactivated.repositories[0].automaticMutationAllowed).toBe(true);
+    expect(reactivated.repositories[0].finalStatus).toBe("planned");
+    expect(reactivated.repositories[0].resumed).toBe(false);
+  });
+
+  test("rejects lifecycle manifests that cannot safely classify inactive repositories", () => {
+    const fleet = fixture();
+    repository(fleet, "alpha", "7".repeat(40));
+    const lifecyclePath = lifecycleManifest(fleet, {
+      alpha: { status: "archived" },
+    });
+
+    expect(() => buildBoringFoundationRolloutReport(fleet, { lifecyclePath })).toThrow(
+      "requires a reason when status is archived",
+    );
   });
 
   test("refuses to mark a rollout accepted without green validation", () => {

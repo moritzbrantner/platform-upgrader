@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -19,6 +19,23 @@ function fixture() {
   const root = mkdtempSync(path.join(os.tmpdir(), "platform-upgrader-cli-"));
   roots.push(root);
   return root;
+}
+
+function repository(fleetRoot, name, sha) {
+  const repoRoot = path.join(fleetRoot, name);
+  const gitDir = path.join(repoRoot, ".git");
+  mkdirSync(path.join(gitDir, "refs", "heads"), { recursive: true });
+  writeFileSync(path.join(gitDir, "HEAD"), "ref: refs/heads/main\n");
+  writeFileSync(path.join(gitDir, "refs", "heads", "main"), `${sha}\n`);
+  writeFileSync(
+    path.join(repoRoot, "package.json"),
+    `${JSON.stringify({
+      name,
+      packageManager: "bun@1.4.0",
+      scripts: { ci: "bun test" },
+    })}\n`,
+  );
+  return repoRoot;
 }
 
 afterEach(() => {
@@ -54,5 +71,38 @@ describe("platform-upgrader CLI", () => {
     const result = JSON.parse(applied.stdout);
     expect(result.changed).toContain("renovate.json");
     expect(result.audit.components.conventions.status).toBe("delegated");
+  });
+
+  test("plans inactive fleet repositories as skipped from a lifecycle manifest", () => {
+    const fleet = fixture();
+    repository(fleet, "alpha", "8".repeat(40));
+    const reportPath = path.join(fleet, "rollout.json");
+    const lifecyclePath = path.join(fleet, "lifecycle.json");
+    writeFileSync(
+      lifecyclePath,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        repositories: {
+          alpha: { status: "archived", reason: "repository is archived upstream" },
+        },
+      })}\n`,
+    );
+
+    const planned = runCli(
+      "rollout",
+      "plan",
+      "boring-foundation-v1",
+      fleet,
+      "--report",
+      reportPath,
+      "--lifecycle",
+      lifecyclePath,
+    );
+
+    expect(planned.status).toBe(0);
+    const report = JSON.parse(planned.stdout);
+    expect(report.repositories[0].lifecycle.status).toBe("archived");
+    expect(report.repositories[0].automaticMutationAllowed).toBe(false);
+    expect(report.repositories[0].finalStatus).toBe("skipped");
   });
 });

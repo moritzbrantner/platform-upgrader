@@ -62,6 +62,38 @@ Each repository record contains the audited default-branch revision (falling bac
 
 Re-running the plan with the same report safely resumes records already marked `accepted` only when the audited revision is unchanged. A moved default branch is re-audited and returns to a non-accepted state.
 
+### Repository lifecycle policy
+
+Automatic fleet mutation may also consume an explicit lifecycle manifest:
+
+```json
+{
+  "schemaVersion": 1,
+  "repositories": {
+    "tauri-template": {
+      "status": "retired",
+      "reason": "superseded by the maintained application template"
+    },
+    "legacy-compat": {
+      "status": "historical",
+      "reason": "kept only for compatibility reference"
+    }
+  }
+}
+```
+
+```bash
+platform-upgrader rollout plan boring-foundation-v1 ~/src \
+  --report ./boring-foundation-rollout.json \
+  --lifecycle ./repository-lifecycle.json
+```
+
+Supported lifecycle states are `maintained`, `archived`, `retired`, and `historical`. Non-maintained entries require a reason. They are still fully audited and retain their stack, foundation, proposal, and conflict evidence, but their rollout status is `skipped` and `automaticMutationAllowed` is false.
+
+A skipped lifecycle decision is sticky in the resumable report even when a later plan omits the manifest. Reactivation therefore requires an explicit `maintained` entry in a lifecycle manifest and a fresh plan. `rollout record` cannot turn an inactive repository into an accepted mutation candidate by itself.
+
+Lifecycle state is supplied by the fleet caller rather than inferred from repository names or fetched from GitHub inside the deterministic migration core. A caller may derive `archived` from GitHub inventory or keep retirement/historical decisions in its own reviewable policy file.
+
 External rollout orchestration records results explicitly:
 
 ```bash
