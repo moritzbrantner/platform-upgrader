@@ -41,7 +41,8 @@ Each component reports one of:
 - Existing `AGENTS.md` is never overwritten.
 - Existing valid `.coding-tooling.json` is never normalized back to a generic profile.
 - Existing Renovate JSON rules are retained; `renovate.json5` is reported as a conflict until comment-preserving editing is supported.
-- Existing custom environment scripts are not replaced by the broad foundation migration.
+- Existing complete Environment v1 composition is repository-owned. If its config and setup/maintenance script still satisfy the structural contract, broad foundation adoption preserves it even when its script bytes predate the latest generated scaffold.
+- Scaffold-byte migration belongs to an explicit Environment v1 contract migration or maintenance action, not incidental foundation normalization.
 - Application/runtime dependencies, package-manager choices, toolchain versions, source code, release metadata, deployment policy, and branch strategy are not changed.
 - A second successful application over unchanged repository state is a true no-op.
 
