@@ -55,33 +55,34 @@ jobs:
         with:
           bun-version: 1.4.0
 
-      - name: Checkout next-template
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          repository: moritzbrantner/next-template
-          path: fleet/next-template
-          persist-credentials: false
+      - name: Checkout public fleet from lifecycle manifest
+        shell: bash
+        env:
+          FLEET_OWNER: moritzbrantner
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/fleet"
 
-      - name: Checkout timeline-editor
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          repository: moritzbrantner/timeline-editor
-          path: fleet/timeline-editor
-          persist-credentials: false
+          node --input-type=module <<'NODE' > "$RUNNER_TEMP/fleet-repositories.txt"
+          import fs from "node:fs";
 
-      - name: Checkout workflow-editor
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          repository: moritzbrantner/workflow-editor
-          path: fleet/workflow-editor
-          persist-credentials: false
+          const manifestPath = process.env.GITHUB_WORKSPACE + "/upgrader/.github/fleet/repository-lifecycle.json";
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+          const names = Object.keys(manifest.repositories ?? {}).sort();
+          for (const name of names) {
+            if (!/^[A-Za-z0-9._-]+$/.test(name)) {
+              throw new Error(`Unsafe repository name in lifecycle manifest: ${name}`);
+            }
+            console.log(name);
+          }
+          NODE
 
-      - name: Checkout graph-editor
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          repository: moritzbrantner/graph-editor
-          path: fleet/graph-editor
-          persist-credentials: false
+          while IFS= read -r repo; do
+            echo "Checking out $FLEET_OWNER/$repo"
+            git clone --depth 1 \
+              "https://github.com/$FLEET_OWNER/$repo.git" \
+              "$GITHUB_WORKSPACE/fleet/$repo"
+          done < "$RUNNER_TEMP/fleet-repositories.txt"
 
       - name: Audit maintained fleet through coding-tooling authority
         shell: bash
@@ -113,6 +114,8 @@ jobs:
             echo 'Authority: `coding-tooling foundation audit`'
             echo
             echo 'Lifecycle policy: `.github/fleet/repository-lifecycle.json`'
+            echo
+            echo 'Current checkout boundary: public repositories only'
             echo
             echo '```json'
             cat "$RUNNER_TEMP/boring-foundation-fleet/report.json"

@@ -16,6 +16,26 @@
     "graph-editor": {
       "status": "maintained",
       "reason": "active shared editor library"
+    },
+    "editor-core": {
+      "status": "maintained",
+      "reason": "active shared headless editor kernel"
+    },
+    "layer-editor": {
+      "status": "maintained",
+      "reason": "active shared React editor library"
+    },
+    "charts": {
+      "status": "maintained",
+      "reason": "active shared React chart library"
+    },
+    "diagrams": {
+      "status": "maintained",
+      "reason": "active shared React diagram library"
+    },
+    "tables": {
+      "status": "maintained",
+      "reason": "active shared React table library"
     }
   }
 }
