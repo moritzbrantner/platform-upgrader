@@ -36,6 +36,18 @@
     "tables": {
       "status": "maintained",
       "reason": "active shared React table library"
+    },
+    "scenedetect-rs": {
+      "status": "maintained",
+      "reason": "active Rust scene-detection workspace"
+    },
+    "native-whisperx": {
+      "status": "maintained",
+      "reason": "active Rust transcription and alignment workspace"
+    },
+    "dirbase": {
+      "status": "maintained",
+      "reason": "active Rust data and API tool"
     }
   }
 }
