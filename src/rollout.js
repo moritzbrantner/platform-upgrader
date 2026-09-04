@@ -13,6 +13,9 @@ import { BORING_FOUNDATION_VERSION } from "./foundation.js";
 import { auditBoringFoundationV1 } from "./foundation-authority.js";
 
 export const ROLLOUT_REPORT_SCHEMA_VERSION = 1;
+export const ROLLOUT_LIFECYCLE_SCHEMA_VERSION = 1;
+
+const LIFECYCLE_STATUSES = new Set(["maintained", "archived", "retired", "historical"]);
 
 function readText(filePath) {
   return readFileSync(filePath, "utf8");
@@ -175,18 +178,66 @@ function previousRecords(existingReportPath) {
   return new Map(report.repositories.map((entry) => [entry.name, entry]));
 }
 
-function auditRepository(repoRoot, codingToolingRoot) {
+function lifecycleRecords(lifecyclePath) {
+  if (!lifecyclePath) return new Map();
+  const resolved = path.resolve(lifecyclePath);
+  const manifest = readJson(resolved);
+  if (
+    !manifest ||
+    manifest.schemaVersion !== ROLLOUT_LIFECYCLE_SCHEMA_VERSION ||
+    !manifest.repositories ||
+    typeof manifest.repositories !== "object" ||
+    Array.isArray(manifest.repositories)
+  ) {
+    throw new Error("Lifecycle manifest is not a compatible rollout lifecycle manifest");
+  }
+
+  const records = new Map();
+  for (const [name, entry] of Object.entries(manifest.repositories)) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`Lifecycle entry for ${name} must be an object`);
+    }
+    if (!LIFECYCLE_STATUSES.has(entry.status)) {
+      throw new Error(`Lifecycle entry for ${name} has unsupported status ${String(entry.status)}`);
+    }
+    const inactive = entry.status !== "maintained";
+    if (inactive && (typeof entry.reason !== "string" || entry.reason.trim().length === 0)) {
+      throw new Error(`Lifecycle entry for ${name} requires a reason when status is ${entry.status}`);
+    }
+    records.set(name, {
+      status: entry.status,
+      reason: typeof entry.reason === "string" && entry.reason.trim() ? entry.reason.trim() : null,
+      source: "manifest",
+    });
+  }
+  return records;
+}
+
+function repositoryLifecycle(repoName, lifecycle) {
+  return (
+    lifecycle.get(repoName) ?? {
+      status: "maintained",
+      reason: null,
+      source: "default",
+    }
+  );
+}
+
+function auditRepository(repoRoot, codingToolingRoot, lifecycle) {
   const audit = auditBoringFoundationV1(repoRoot, { codingToolingRoot });
   const git = repositoryGitState(repoRoot);
   const validation = repositoryValidationCommand(repoRoot);
   const auditedRevision = git?.defaultBranchSha ?? git?.checkedOutSha ?? null;
-  const finalStatus = !git
-    ? "blocked"
-    : !audit.safeToApply
+  const maintained = lifecycle.status === "maintained";
+  const finalStatus = !maintained
+    ? "skipped"
+    : !git
       ? "blocked"
-      : audit.complete
-        ? "complete"
-        : "planned";
+      : !audit.safeToApply
+        ? "blocked"
+        : audit.complete
+          ? "complete"
+          : "planned";
 
   return {
     name: path.basename(repoRoot),
@@ -199,6 +250,8 @@ function auditRepository(repoRoot, codingToolingRoot) {
     proposedChanges: audit.pending,
     conflicts: audit.conflicts,
     safeToApply: audit.safeToApply,
+    lifecycle,
+    automaticMutationAllowed: maintained && Boolean(git) && audit.safeToApply,
     validation: { ...validation, status: "not-run" },
     application: { commitSha: null, prNumber: null },
     acceptedRevision: null,
@@ -209,6 +262,7 @@ function auditRepository(repoRoot, codingToolingRoot) {
 
 function resumeAcceptedRecord(current, previous) {
   if (
+    current.lifecycle.status !== "maintained" ||
     !previous ||
     previous.finalStatus !== "accepted" ||
     !current.auditedRevision ||
@@ -227,18 +281,55 @@ function resumeAcceptedRecord(current, previous) {
   };
 }
 
+function resumeSkippedRecord(current, previous) {
+  if (
+    current.lifecycle.source === "manifest" ||
+    !previous ||
+    previous.finalStatus !== "skipped" ||
+    !previous.lifecycle ||
+    previous.lifecycle.status === "maintained"
+  ) {
+    return current;
+  }
+
+  return {
+    ...current,
+    lifecycle: previous.lifecycle,
+    automaticMutationAllowed: false,
+    finalStatus: "skipped",
+    resumed: true,
+  };
+}
+
+function resumePreviousRecord(current, previous) {
+  const skipped = resumeSkippedRecord(current, previous);
+  if (skipped !== current) return skipped;
+  return resumeAcceptedRecord(current, previous);
+}
+
 export function buildBoringFoundationRolloutReport(
   fleetRoot,
-  { existingReportPath = null, repositoryNames = null, codingToolingRoot = null } = {},
+  {
+    existingReportPath = null,
+    repositoryNames = null,
+    codingToolingRoot = null,
+    lifecyclePath = null,
+  } = {},
 ) {
   const root = path.resolve(fleetRoot);
   const previous = previousRecords(existingReportPath);
+  const lifecycle = lifecycleRecords(lifecyclePath);
   const selected = repositoryNames ? new Set(repositoryNames) : null;
   const repositories = repositoryDirectories(root)
     .filter((repoRoot) => !selected || selected.has(path.basename(repoRoot)))
     .map((repoRoot) => {
-      const current = auditRepository(repoRoot, codingToolingRoot);
-      return resumeAcceptedRecord(current, previous.get(current.name));
+      const name = path.basename(repoRoot);
+      const current = auditRepository(
+        repoRoot,
+        codingToolingRoot,
+        repositoryLifecycle(name, lifecycle),
+      );
+      return resumePreviousRecord(current, previous.get(current.name));
     });
 
   return {
@@ -246,6 +337,7 @@ export function buildBoringFoundationRolloutReport(
     migration: BORING_FOUNDATION_VERSION,
     fleetRoot: root,
     codingToolingRoot: codingToolingRoot ? path.resolve(codingToolingRoot) : null,
+    lifecyclePath: lifecyclePath ? path.resolve(lifecyclePath) : null,
     repositoryCount: repositories.length,
     repositories,
   };
@@ -284,6 +376,13 @@ export function recordRolloutResult(
 
   const record = report.repositories.find((entry) => entry.name === repoName);
   if (!record) throw new Error(`Repository ${repoName} is not present in the rollout report`);
+
+  const lifecycleStatus = record.lifecycle?.status ?? "maintained";
+  if (lifecycleStatus !== "maintained" && finalStatus !== "skipped") {
+    throw new Error(
+      "A non-maintained rollout record must be re-planned with an explicit maintained lifecycle status before it can change rollout status",
+    );
+  }
 
   const nextValidationStatus = validationStatus ?? record.validation?.status ?? "not-run";
   if (finalStatus === "accepted" && nextValidationStatus !== "green") {
