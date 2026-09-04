@@ -1,0 +1,73 @@
+name: Generate Canary Environment Candidates
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/generate-canary-environments.yml
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout platform upgrader
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          path: upgrader
+
+      - name: Checkout nlp-stack
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/nlp-stack
+          ref: main
+          path: fleet/nlp-stack
+          persist-credentials: false
+
+      - name: Checkout rust-packages candidate
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/rust-packages
+          ref: chore/boring-foundation-v1
+          path: fleet/rust-packages
+          persist-credentials: false
+
+      - name: Checkout ui candidate
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/ui
+          ref: chore/boring-foundation-v1
+          path: fleet/ui
+          persist-credentials: false
+
+      - name: Generate exact Environment v1 candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/environment-candidates"
+          for repo in nlp-stack rust-packages ui; do
+            root="$GITHUB_WORKSPACE/fleet/$repo"
+            node "$GITHUB_WORKSPACE/upgrader/src/cli.js" apply environment-v1 "$root" > "$RUNNER_TEMP/${repo}-apply.json"
+            git -C "$root" add .repository-environment.toml scripts/codex-environment.sh
+            before="$(git -C "$root" diff --cached --binary | sha256sum | cut -d' ' -f1)"
+
+            node "$GITHUB_WORKSPACE/upgrader/src/cli.js" apply environment-v1 "$root" > "$RUNNER_TEMP/${repo}-apply-second.json"
+            git -C "$root" add .repository-environment.toml scripts/codex-environment.sh
+            after="$(git -C "$root" diff --cached --binary | sha256sum | cut -d' ' -f1)"
+            test "$before" = "$after"
+
+            node "$GITHUB_WORKSPACE/upgrader/src/cli.js" audit "$root" > "$RUNNER_TEMP/${repo}-audit.json"
+            mkdir -p "$RUNNER_TEMP/environment-candidates/$repo/scripts"
+            cp "$root/.repository-environment.toml" "$RUNNER_TEMP/environment-candidates/$repo/.repository-environment.toml"
+            cp "$root/scripts/codex-environment.sh" "$RUNNER_TEMP/environment-candidates/$repo/scripts/codex-environment.sh"
+            cp "$RUNNER_TEMP/${repo}-apply.json" "$RUNNER_TEMP/environment-candidates/$repo/apply.json"
+            cp "$RUNNER_TEMP/${repo}-audit.json" "$RUNNER_TEMP/environment-candidates/$repo/audit.json"
+          done
+
+      - name: Upload exact candidates
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: environment-v1-canary-candidates
+          path: ${{ runner.temp }}/environment-candidates
+          retention-days: 7
