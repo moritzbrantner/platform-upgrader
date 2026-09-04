@@ -1,0 +1,103 @@
+name: Boring Foundation Canary Audit
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/boring-foundation-canary.yml
+      - src/environment.js
+      - src/foundation.js
+      - src/rollout.js
+      - tests/environment.test.js
+      - tests/foundation.test.js
+      - tests/rollout.test.js
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout platform upgrader
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          path: upgrader
+
+      - name: Checkout rect
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/rect
+          path: fleet/rect
+          persist-credentials: false
+
+      - name: Checkout ecs-lab
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/ecs-lab
+          path: fleet/ecs-lab
+          persist-credentials: false
+
+      - name: Checkout shader-lab
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/shader-lab
+          path: fleet/shader-lab
+          persist-credentials: false
+
+      - name: Checkout moenarch-foundation
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/moenarch-foundation
+          path: fleet/moenarch-foundation
+          persist-credentials: false
+
+      - name: Checkout audio-analysis
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/audio-analysis
+          path: fleet/audio-analysis
+          persist-credentials: false
+
+      - name: Checkout ui
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/ui
+          path: fleet/ui
+          persist-credentials: false
+
+      - name: Checkout rust-packages
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/rust-packages
+          path: fleet/rust-packages
+          persist-credentials: false
+
+      - name: Checkout nlp-stack
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/nlp-stack
+          path: fleet/nlp-stack
+          persist-credentials: false
+
+      - name: Audit canary fleet
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/boring-foundation-canary"
+          node upgrader/src/cli.js rollout plan boring-foundation-v1 "$GITHUB_WORKSPACE/fleet" \
+            --report "$RUNNER_TEMP/boring-foundation-canary/report.json"
+          cat "$RUNNER_TEMP/boring-foundation-canary/report.json"
+          {
+            echo '## Boring foundation canary audit'
+            echo
+            echo '```json'
+            cat "$RUNNER_TEMP/boring-foundation-canary/report.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload canary report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: boring-foundation-canary
+          path: ${{ runner.temp }}/boring-foundation-canary/report.json
+          retention-days: 7
