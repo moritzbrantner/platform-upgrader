@@ -46,3 +46,30 @@ Each component reports one of:
 - A second successful application over unchanged repository state is a true no-op.
 
 Repository-native deterministic validation remains the acceptance gate for a rollout candidate. Heuristic analyzer findings are separate advisory evidence until individually calibrated and promoted by explicit repository policy.
+
+## Resumable fleet rollout reports
+
+Broad adoption is coordinated with a versioned local JSON report rather than hidden agent state:
+
+```bash
+platform-upgrader rollout plan boring-foundation-v1 ~/src \
+  --report ./boring-foundation-rollout.json \
+  --repos rect,ecs-lab,shader-lab
+```
+
+Each repository record contains the audited default-branch revision (falling back to the checked-out revision when `origin/HEAD` is unavailable), detected stack evidence, current foundation component states, proposed deterministic changes, conflicts, a repository-owned validation command when one can be resolved, application commit/PR identity, and final rollout status.
+
+Re-running the plan with the same report safely resumes records already marked `accepted` only when the audited revision is unchanged. A moved default branch is re-audited and returns to a non-accepted state.
+
+External rollout orchestration records results explicitly:
+
+```bash
+platform-upgrader rollout record ./boring-foundation-rollout.json rect \
+  --status accepted \
+  --commit <sha> \
+  --pr <number> \
+  --validation-command "bun run ci" \
+  --validation-status green
+```
+
+The report refuses an `accepted` status unless repository-native validation is recorded as green. The rollout command never auto-merges a repository.
