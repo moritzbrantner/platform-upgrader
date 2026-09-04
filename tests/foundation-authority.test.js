@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 import {
   auditBoringFoundationV1,
@@ -88,5 +89,27 @@ describe("coding-tooling foundation authority", () => {
 
     const audit = auditBoringFoundationV1(repoRoot, { codingToolingRoot: missingRoot });
     expect(audit.safeToApply).toBe(false);
+  });
+
+  test("CLI accepts --coding-tooling-root without an explicit repository path", () => {
+    const repoRoot = repositoryFixture();
+    const toolingRoot = fakeCodingTooling({
+      environment: "missing",
+      tooling: "missing",
+      commands: "missing",
+      conventions: "missing",
+      renovate: "missing",
+    });
+    const cliPath = path.resolve(import.meta.dir, "..", "src", "cli.js");
+    const execution = spawnSync(
+      "bun",
+      [cliPath, "audit", "boring-foundation-v1", "--coding-tooling-root", toolingRoot],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+
+    expect(execution.status).toBe(0);
+    const report = JSON.parse(execution.stdout);
+    expect(report.repoName).toBe(path.basename(repoRoot));
+    expect(report.authority.status).toBe("pending");
   });
 });
