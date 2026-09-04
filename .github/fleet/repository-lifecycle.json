@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "repositories": {
+    "next-template": {
+      "status": "maintained",
+      "reason": "canonical active Next.js platform scaffold"
+    },
+    "timeline-editor": {
+      "status": "maintained",
+      "reason": "active shared editor library"
+    },
+    "workflow-editor": {
+      "status": "maintained",
+      "reason": "active shared editor library"
+    },
+    "graph-editor": {
+      "status": "maintained",
+      "reason": "active shared editor library"
+    }
+  }
+}

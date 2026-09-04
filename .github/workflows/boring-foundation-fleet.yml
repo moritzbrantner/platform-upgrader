@@ -1,0 +1,127 @@
+name: Boring Foundation Fleet
+
+on:
+  pull_request:
+    paths:
+      - .github/fleet/repository-lifecycle.json
+      - .github/workflows/boring-foundation-fleet.yml
+      - src/environment.js
+      - src/foundation.js
+      - src/foundation-authority.js
+      - src/rollout.js
+      - tests/environment.test.js
+      - tests/foundation.test.js
+      - tests/foundation-authority.test.js
+      - tests/rollout.test.js
+  push:
+    branches:
+      - main
+    paths:
+      - .github/fleet/repository-lifecycle.json
+      - .github/workflows/boring-foundation-fleet.yml
+      - src/environment.js
+      - src/foundation.js
+      - src/foundation-authority.js
+      - src/rollout.js
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: boring-foundation-fleet
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout platform upgrader
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          path: upgrader
+
+      - name: Checkout coding-tooling authority
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/coding-tooling
+          path: coding-tooling
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.0
+
+      - name: Checkout next-template
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/next-template
+          path: fleet/next-template
+          persist-credentials: false
+
+      - name: Checkout timeline-editor
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/timeline-editor
+          path: fleet/timeline-editor
+          persist-credentials: false
+
+      - name: Checkout workflow-editor
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/workflow-editor
+          path: fleet/workflow-editor
+          persist-credentials: false
+
+      - name: Checkout graph-editor
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: moritzbrantner/graph-editor
+          path: fleet/graph-editor
+          persist-credentials: false
+
+      - name: Audit maintained fleet through coding-tooling authority
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/boring-foundation-fleet"
+          node upgrader/src/cli.js rollout plan boring-foundation-v1 "$GITHUB_WORKSPACE/fleet" \
+            --report "$RUNNER_TEMP/boring-foundation-fleet/report.json" \
+            --coding-tooling-root "$GITHUB_WORKSPACE/coding-tooling" \
+            --lifecycle "$GITHUB_WORKSPACE/upgrader/.github/fleet/repository-lifecycle.json"
+
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const reportPath = process.env.RUNNER_TEMP + "/boring-foundation-fleet/report.json";
+          const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+          const blockers = report.repositories.filter((repo) => repo.finalStatus === "blocked");
+          if (blockers.length > 0) {
+            console.error(
+              `Fleet audit blocked: ${blockers.map((repo) => repo.name).join(", ")}`,
+            );
+            process.exit(1);
+          }
+          NODE
+
+          cat "$RUNNER_TEMP/boring-foundation-fleet/report.json"
+          {
+            echo '## Boring foundation fleet audit'
+            echo
+            echo 'Authority: `coding-tooling foundation audit`'
+            echo
+            echo 'Lifecycle policy: `.github/fleet/repository-lifecycle.json`'
+            echo
+            echo '```json'
+            cat "$RUNNER_TEMP/boring-foundation-fleet/report.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload fleet report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: boring-foundation-fleet
+          path: ${{ runner.temp }}/boring-foundation-fleet/report.json
+          retention-days: 14
