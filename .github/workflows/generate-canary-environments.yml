@@ -70,4 +70,5 @@ jobs:
         with:
           name: environment-v1-canary-candidates
           path: ${{ runner.temp }}/environment-candidates
+          include-hidden-files: true
           retention-days: 7
