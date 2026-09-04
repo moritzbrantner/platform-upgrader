@@ -80,6 +80,18 @@
     "nlp-stack": {
       "status": "maintained",
       "reason": "proven boring-foundation canary and active NLP workspace"
+    },
+    "media-similarity": {
+      "status": "maintained",
+      "reason": "active mixed Rust and React media similarity repository"
+    },
+    "maps": {
+      "status": "maintained",
+      "reason": "active shared React geospatial and visualization library"
+    },
+    "react-render-budget": {
+      "status": "maintained",
+      "reason": "active React performance verification library"
     }
   }
 }
