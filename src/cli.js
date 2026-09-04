@@ -52,11 +52,11 @@ if (command === "rollout" && first === "plan") {
   const reportOption = optionValue(values, "report");
   if (!reportOption) {
     console.error(
-      "Usage: platform-upgrader rollout plan boring-foundation-v1 [fleet-root] --report <path> [--repos <name,...>] [--coding-tooling-root <path>]",
+      "Usage: platform-upgrader rollout plan boring-foundation-v1 [fleet-root] --report <path> [--repos <name,...>] [--coding-tooling-root <path>] [--lifecycle <path>]",
     );
     process.exit(1);
   }
-  const knownFlags = new Set(["--report", "--repos", "--coding-tooling-root"]);
+  const knownFlags = new Set(["--report", "--repos", "--coding-tooling-root", "--lifecycle"]);
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
     if (!knownFlags.has(value) || !values[index + 1] || values[index + 1].startsWith("--")) {
@@ -71,11 +71,13 @@ if (command === "rollout" && first === "plan") {
     ?.split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+  const lifecycleOption = optionValue(values, "lifecycle");
   try {
     const report = buildBoringFoundationRolloutReport(resolveRepoRoot(inputPath), {
       existingReportPath: reportPath,
       repositoryNames: repositoryNames?.length ? repositoryNames : null,
       codingToolingRoot: codingToolingRoot(values),
+      lifecyclePath: lifecycleOption ? path.resolve(process.cwd(), lifecycleOption) : null,
     });
     writeRolloutReport(reportPath, report);
     console.log(JSON.stringify(report, null, 2));
