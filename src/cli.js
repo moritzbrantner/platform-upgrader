@@ -22,6 +22,10 @@ function resolveRepoRoot(inputPath) {
   return path.resolve(process.cwd(), inputPath ?? ".");
 }
 
+function optionalPath(value) {
+  return value && !value.startsWith("--") ? value : undefined;
+}
+
 function optionValue(values, name) {
   const index = values.indexOf(`--${name}`);
   if (index < 0) return null;
@@ -118,7 +122,7 @@ if (command === "rollout" && first === "record") {
 
 if (command === "audit") {
   if (first === "boring-foundation-v1") {
-    const result = auditBoringFoundationV1(resolveRepoRoot(second), {
+    const result = auditBoringFoundationV1(resolveRepoRoot(optionalPath(second)), {
       codingToolingRoot: codingToolingRoot(args),
     });
     console.log(JSON.stringify(result, null, 2));
@@ -143,7 +147,7 @@ if (command === "audit") {
 }
 
 if (command === "apply") {
-  const repoRoot = resolveRepoRoot(second);
+  const repoRoot = resolveRepoRoot(optionalPath(second));
   let result;
   if (first === "scaffold-v2") {
     result = applyScaffoldV2(repoRoot);
