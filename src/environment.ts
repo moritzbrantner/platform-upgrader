@@ -315,7 +315,7 @@ for relative in sorted(selected):
 print('cacheable')
 print(fingerprint.hexdigest())
 PY
-)"
+)
 
 reconciliation_fingerprint=""
 skip_reconciliation=0
