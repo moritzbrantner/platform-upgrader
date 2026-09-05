@@ -93,19 +93,23 @@ function normalizePackageJson(packageJsonPath: string): boolean {
     scriptsValue && typeof scriptsValue === "object" && !Array.isArray(scriptsValue)
       ? (scriptsValue as Record<string, unknown>)
       : null;
+  if (!scripts) {
+    return false;
+  }
+
   let changed = false;
 
-  if (scripts?.["sync:monorepo"]) {
+  if (scripts["sync:monorepo"]) {
     delete scripts["sync:monorepo"];
     changed = true;
   }
 
-  if (scripts?.["test:e2e"] === "playwright test") {
+  if (scripts["test:e2e"] === "playwright test") {
     scripts["test:e2e"] = "playwright test e2e/smoke-auth-contract.spec.ts";
     changed = true;
   }
 
-  const e2eScript = scripts?.["test:e2e"];
+  const e2eScript = scripts["test:e2e"];
   if (typeof e2eScript === "string" && e2eScript.includes("example.e2e.ts")) {
     scripts["test:e2e"] = e2eScript.replace("example.e2e.ts", "desktop-smoke.e2e.ts");
     changed = true;
