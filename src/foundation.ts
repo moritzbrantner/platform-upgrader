@@ -24,9 +24,10 @@ type FoundationComponents = {
   conventions: FoundationComponent;
 };
 type FoundationEntry = FoundationComponent & { component: string };
-type ParsedJson =
-  | { value: JsonObject; error: null }
-  | { value: null; error: string };
+type ParsedJson = {
+  value: JsonObject;
+  error: string | null;
+};
 
 function isRecord(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -45,11 +46,11 @@ function readJson(filePath: string): ParsedJson {
   try {
     const value = JSON.parse(readText(filePath)) as unknown;
     if (!isRecord(value)) {
-      return { value: null, error: "JSON root must be an object" };
+      return { value: {}, error: "JSON root must be an object" };
     }
     return { value, error: null };
   } catch (error) {
-    return { value: null, error: error instanceof Error ? error.message : String(error) };
+    return { value: {}, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
