@@ -21,7 +21,12 @@ jobs:
         with:
           bun-version: ${{ steps.bun-version.outputs.version }}
       - run: bun install --no-save
-      - run: bun run check
+      - run: bun run lint && bun run typecheck && bun run test
+      - run: bun run format
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: formatted-typescript
+          path: src/*.ts
 
   findings:
     permissions:
