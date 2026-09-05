@@ -17,9 +17,9 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
-    "format": "bunx oxfmt@0.65.0 .",
-    "format:check": "bunx oxfmt@0.65.0 --check .",
+    "check": "bun run lint && bun run typecheck && bun run test && bun run format:check",
+    "format": "bunx oxfmt@0.65.0 src/*.ts",
+    "format:check": "bunx oxfmt@0.65.0 --check src/*.ts",
     "lint": "bunx oxlint@1.80.0 --format=github",
     "release:publish": "bun run build && node scripts/publish-package.mjs",
     "test": "bun run build && bun run test:unit",
