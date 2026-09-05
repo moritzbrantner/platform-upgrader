@@ -2,6 +2,8 @@
 
 Private CLI package for deterministic repository audits/migrations plus explicit reviewable toolchain refreshes.
 
+For the fleet-level architecture, ownership boundaries, rollout sequence, and maintained-repository baseline, see [Fleet foundation guide](./docs/fleet-foundation.md).
+
 ## Commands
 
 Audit a repo without mutating it:
