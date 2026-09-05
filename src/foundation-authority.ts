@@ -11,7 +11,7 @@ type JsonObject = Record<string, unknown>;
 type ComponentStatus = "missing" | "adopted" | "invalid" | "unsupported";
 type FoundationReportStatus = "passed" | "failed" | "unavailable" | "error";
 type FoundationAuthorityOptions = {
-  codingToolingRoot?: string | null;
+  codingToolingRoot?: string | null | undefined;
 };
 
 type AuthorityEntry = {
