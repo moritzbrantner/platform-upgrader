@@ -20,7 +20,7 @@
     "check": "bun run lint && bun run typecheck && bun run test && bun run format:check",
     "format": "bunx oxfmt@0.65.0 src/*.ts",
     "format:check": "bunx oxfmt@0.65.0 --check src/*.ts",
-    "lint": "bunx oxlint@1.80.0 --format=github",
+    "lint": "bunx oxlint@1.80.0 --format=github src/*.ts",
     "release:publish": "bun run build && node scripts/publish-package.mjs",
     "test": "bun run build && bun run test:unit",
     "test:unit": "bun test ./tests/platform-upgrader.test.js ./tests/environment.test.js ./tests/foundation.test.js ./tests/foundation-authority.test.js ./tests/refresh.test.js ./tests/cli.test.js ./tests/reconciliation.test.js ./tests/rollout.test.js",
