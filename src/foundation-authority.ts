@@ -10,7 +10,7 @@ import {
 type JsonObject = Record<string, unknown>;
 type ComponentStatus = "missing" | "adopted" | "invalid" | "unsupported";
 type FoundationAuthorityOptions = {
-  codingToolingRoot?: string | null;
+  codingToolingRoot?: string | null | undefined;
 };
 
 type AuthorityEntry = {
