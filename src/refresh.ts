@@ -65,16 +65,15 @@ function versionTuple(value: string): [number, number, number] {
 }
 
 function compareVersions(left: string, right: string): number {
-  const a = versionTuple(left);
-  const b = versionTuple(right);
-  for (let index = 0; index < a.length; index += 1) {
-    const leftPart = a[index];
-    const rightPart = b[index];
-    if (leftPart !== rightPart) {
-      return leftPart - rightPart;
-    }
+  const [leftMajor, leftMinor, leftPatch] = versionTuple(left);
+  const [rightMajor, rightMinor, rightPatch] = versionTuple(right);
+  if (leftMajor !== rightMajor) {
+    return leftMajor - rightMajor;
   }
-  return 0;
+  if (leftMinor !== rightMinor) {
+    return leftMinor - rightMinor;
+  }
+  return leftPatch - rightPatch;
 }
 
 function tomlString(value: string): string {
@@ -265,7 +264,7 @@ export async function resolveLatestRust(fetchImpl: typeof fetch = fetch): Promis
   const manifest = await response.text();
   const section = manifest.match(/\[pkg\.rust\]([\s\S]*?)(?=\n\[|$)/);
   const sectionText = section?.[1];
-  const version = sectionText?.match(/^version\s*=\s*"(\d+\.\d+\.\d+)(?:\s|\")/m)?.[1];
+  const version = sectionText?.match(/^version\s*=\s*"(\d+\.\d+\.\d+)(?:\s|")/m)?.[1];
   if (!version) {
     throw new Error("could not parse Rust stable version from channel manifest");
   }
