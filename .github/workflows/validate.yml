@@ -20,7 +20,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ steps.bun-version.outputs.version }}
-      - run: bun run test
+      - run: bun install --no-save
+      - run: bun run check
 
   findings:
     permissions:
