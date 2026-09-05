@@ -7,17 +7,28 @@
     "url": "git+https://github.com/moritzbrantner/platform-upgrader.git"
   },
   "files": [
-    "src",
+    "dist",
     "migrations",
     ".platform-upgrader.json.example",
     "README.md"
   ],
   "bin": {
-    "platform-upgrader": "./src/cli.js"
+    "platform-upgrader": "./dist/cli.js"
   },
   "scripts": {
-    "release:publish": "node scripts/publish-package.mjs",
-    "test": "bun test ./tests/platform-upgrader.test.js ./tests/environment.test.js ./tests/foundation.test.js ./tests/foundation-authority.test.js ./tests/refresh.test.js ./tests/cli.test.js ./tests/reconciliation.test.js ./tests/rollout.test.js"
+    "build": "tsc -p tsconfig.json",
+    "check": "bun run lint && bun run typecheck && bun run test && bun run format:check",
+    "format": "bunx oxfmt@0.65.0 src/*.ts",
+    "format:check": "bunx oxfmt@0.65.0 --check src/*.ts",
+    "lint": "bunx oxlint@1.80.0 --format=github src/*.ts",
+    "release:publish": "bun run build && node scripts/publish-package.mjs",
+    "test": "bun run build && bun run test:unit",
+    "test:unit": "bun test ./tests/platform-upgrader.test.js ./tests/environment.test.js ./tests/foundation.test.js ./tests/foundation-authority.test.js ./tests/refresh.test.js ./tests/cli.test.js ./tests/reconciliation.test.js ./tests/rollout.test.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "26.3.0",
+    "typescript": "7.0.2"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",

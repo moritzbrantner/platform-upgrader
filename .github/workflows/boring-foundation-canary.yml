@@ -4,10 +4,16 @@ on:
   pull_request:
     paths:
       - .github/workflows/boring-foundation-canary.yml
+      - src/cli.js
+      - src/cli.ts
       - src/environment.js
+      - src/environment.ts
       - src/foundation.js
+      - src/foundation.ts
       - src/foundation-authority.js
+      - src/foundation-authority.ts
       - src/rollout.js
+      - src/rollout.ts
       - tests/environment.test.js
       - tests/foundation.test.js
       - tests/foundation-authority.test.js
@@ -37,6 +43,12 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.0
+
+      - name: Build platform upgrader
+        working-directory: upgrader
+        run: |
+          bun install --no-save
+          bun run build
 
       - name: Checkout rect
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -98,7 +110,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/boring-foundation-canary"
-          node upgrader/src/cli.js rollout plan boring-foundation-v1 "$GITHUB_WORKSPACE/fleet" \
+          node upgrader/dist/cli.js rollout plan boring-foundation-v1 "$GITHUB_WORKSPACE/fleet" \
             --report "$RUNNER_TEMP/boring-foundation-canary/report.json" \
             --coding-tooling-root "$GITHUB_WORKSPACE/coding-tooling"
           cat "$RUNNER_TEMP/boring-foundation-canary/report.json"

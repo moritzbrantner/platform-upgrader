@@ -13,6 +13,8 @@ jobs:
       packages: write
     uses: moritzbrantner/reusable-workflows/.github/workflows/release-template.yml@scaffold-v2-release-auth
     with:
-      validate_command: bun run test
+      bun_version: 1.4.0
+      install_command: bun install --no-save
+      validate_command: bun run check
       release_type: package
       release_command: bun run release:publish
