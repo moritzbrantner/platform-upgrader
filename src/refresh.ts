@@ -58,9 +58,7 @@ function exactVersion(value: string, owner: string): string {
 }
 
 function versionTuple(value: string): [number, number, number] {
-  const [major = 0, minor = 0, patch = 0] = exactVersion(value, "version")
-    .split(".")
-    .map(Number);
+  const [major = 0, minor = 0, patch = 0] = exactVersion(value, "version").split(".").map(Number);
   return [major, minor, patch];
 }
 
@@ -118,7 +116,11 @@ function nativePins(repoRoot: string): NativePin[] {
   if (existsSync(packagePath)) {
     const source = readText(packagePath);
     const parsed = JSON.parse(source) as unknown;
-    if (isRecord(parsed) && typeof parsed.packageManager === "string" && parsed.packageManager.startsWith("bun@")) {
+    if (
+      isRecord(parsed) &&
+      typeof parsed.packageManager === "string" &&
+      parsed.packageManager.startsWith("bun@")
+    ) {
       const version = exactVersion(parsed.packageManager.slice(4), "package.json packageManager");
       pins.push({ tool: "bun", version, file: "package.json", source });
     }
@@ -283,10 +285,7 @@ function updatedNativeSource(pin: NativePin, nextVersion: string): string {
     return next;
   }
 
-  const next = pin.source.replace(
-    /(channel\s*=\s*")\d+\.\d+\.\d+("\s*)/,
-    `$1${nextVersion}$2`,
-  );
+  const next = pin.source.replace(/(channel\s*=\s*")\d+\.\d+\.\d+("\s*)/, `$1${nextVersion}$2`);
   if (next === pin.source) {
     throw new Error("could not update rust-toolchain.toml channel");
   }

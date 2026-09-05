@@ -7,11 +7,7 @@ import process from "node:process";
 import { applyEnvironmentV1, auditEnvironmentV1 } from "./environment.js";
 import { applyBoringFoundationV1, auditBoringFoundationV1 } from "./foundation-authority.js";
 import { applyScaffoldV2, auditRepo } from "./index.js";
-import {
-  clearCompatibilityHold,
-  recordCompatibilityHold,
-  refreshLatestStable,
-} from "./refresh.js";
+import { clearCompatibilityHold, recordCompatibilityHold, refreshLatestStable } from "./refresh.js";
 import {
   buildBoringFoundationRolloutReport,
   recordRolloutResult,
@@ -51,7 +47,8 @@ if (command === "rollout" && first === "plan") {
 
   const values = args.slice(3);
   const candidateInputPath = values[0];
-  const inputPath = candidateInputPath && !candidateInputPath.startsWith("--") ? values.shift() : ".";
+  const inputPath =
+    candidateInputPath && !candidateInputPath.startsWith("--") ? values.shift() : ".";
   const reportOption = optionValue(values, "report");
   if (!reportOption) {
     console.error(
@@ -106,10 +103,7 @@ if (command === "rollout" && first === "record") {
 
   const prValue = optionValue(args, "pr");
   const parsedPrNumber = prValue === null ? null : Number(prValue);
-  if (
-    parsedPrNumber !== null &&
-    (!Number.isInteger(parsedPrNumber) || parsedPrNumber <= 0)
-  ) {
+  if (parsedPrNumber !== null && (!Number.isInteger(parsedPrNumber) || parsedPrNumber <= 0)) {
     console.error("--pr must be a positive integer");
     process.exit(1);
   }
@@ -191,7 +185,9 @@ if (command === "refresh" && first === "latest-stable") {
 if (command === "hold" && first === "record") {
   const [, , tool, candidate, testedRevision, reason, inputPath] = args;
   if (!tool || !candidate || !testedRevision || !reason) {
-    console.error("Usage: platform-upgrader hold record <tool> <candidate> <tested-revision> <reason> [path]");
+    console.error(
+      "Usage: platform-upgrader hold record <tool> <candidate> <tested-revision> <reason> [path]",
+    );
     process.exit(1);
   }
   const result = recordCompatibilityHold(resolveRepoRoot(inputPath), {

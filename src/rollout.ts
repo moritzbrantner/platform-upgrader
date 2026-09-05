@@ -100,7 +100,9 @@ function gitDirectory(repoRoot: string): string | null {
     return dotGit;
   }
 
-  const match = readText(dotGit).trim().match(/^gitdir:\s*(.+)$/);
+  const match = readText(dotGit)
+    .trim()
+    .match(/^gitdir:\s*(.+)$/);
   const relative = match?.[1];
   return relative ? path.resolve(repoRoot, relative) : null;
 }
@@ -145,7 +147,11 @@ function symbolicRef(gitDir: string, relativePath: string): string | null {
   if (!existsSync(filePath)) {
     return null;
   }
-  return readText(filePath).trim().match(/^ref:\s*(.+)$/)?.[1] ?? null;
+  return (
+    readText(filePath)
+      .trim()
+      .match(/^ref:\s*(.+)$/)?.[1] ?? null
+  );
 }
 
 export function repositoryGitState(repoRoot: string): GitState | null {
@@ -173,8 +179,7 @@ export function repositoryGitState(repoRoot: string): GitState | null {
     checkedOutRef,
     checkedOutSha,
     defaultBranchRef,
-    defaultBranch:
-      defaultBranchRef?.replace(/^refs\/(?:heads|remotes\/origin)\//, "") ?? null,
+    defaultBranch: defaultBranchRef?.replace(/^refs\/(?:heads|remotes\/origin)\//, "") ?? null,
     defaultBranchSha,
   };
 }
@@ -287,7 +292,9 @@ function isRolloutRecord(value: unknown): value is RolloutRecord {
   return isRecord(value) && typeof value.name === "string";
 }
 
-function previousRecords(existingReportPath: string | null | undefined): Map<string, RolloutRecord> {
+function previousRecords(
+  existingReportPath: string | null | undefined,
+): Map<string, RolloutRecord> {
   if (!existingReportPath || !existsSync(existingReportPath)) {
     return new Map();
   }
@@ -323,7 +330,10 @@ function lifecycleRecords(lifecyclePath: string | null | undefined): Map<string,
     if (!isRecord(entry)) {
       throw new Error(`Lifecycle entry for ${name} must be an object`);
     }
-    if (typeof entry.status !== "string" || !LIFECYCLE_STATUSES.has(entry.status as LifecycleStatus)) {
+    if (
+      typeof entry.status !== "string" ||
+      !LIFECYCLE_STATUSES.has(entry.status as LifecycleStatus)
+    ) {
       throw new Error(`Lifecycle entry for ${name} has unsupported status ${String(entry.status)}`);
     }
     const status = entry.status as LifecycleStatus;
@@ -350,7 +360,12 @@ function repositoryLifecycle(repoName: string, lifecycle: Map<string, Lifecycle>
   );
 }
 
-function rolloutStatus(maintained: boolean, git: GitState | null, safeToApply: boolean, complete: boolean): string {
+function rolloutStatus(
+  maintained: boolean,
+  git: GitState | null,
+  safeToApply: boolean,
+  complete: boolean,
+): string {
   if (!maintained) {
     return "skipped";
   }
@@ -393,7 +408,10 @@ function auditRepository(
   };
 }
 
-function resumeAcceptedRecord(current: RolloutRecord, previous: RolloutRecord | undefined): RolloutRecord {
+function resumeAcceptedRecord(
+  current: RolloutRecord,
+  previous: RolloutRecord | undefined,
+): RolloutRecord {
   if (
     current.lifecycle.status !== "maintained" ||
     !previous ||
@@ -414,7 +432,10 @@ function resumeAcceptedRecord(current: RolloutRecord, previous: RolloutRecord | 
   };
 }
 
-function resumeSkippedRecord(current: RolloutRecord, previous: RolloutRecord | undefined): RolloutRecord {
+function resumeSkippedRecord(
+  current: RolloutRecord,
+  previous: RolloutRecord | undefined,
+): RolloutRecord {
   if (
     current.lifecycle.source === "manifest" ||
     !previous ||
@@ -433,7 +454,10 @@ function resumeSkippedRecord(current: RolloutRecord, previous: RolloutRecord | u
   };
 }
 
-function resumePreviousRecord(current: RolloutRecord, previous: RolloutRecord | undefined): RolloutRecord {
+function resumePreviousRecord(
+  current: RolloutRecord,
+  previous: RolloutRecord | undefined,
+): RolloutRecord {
   const skipped = resumeSkippedRecord(current, previous);
   if (skipped !== current) {
     return skipped;
@@ -535,7 +559,7 @@ export function recordRolloutResult(
   };
   record.validation = {
     command: validationCommand ?? record.validation.command ?? null,
-    source: validationCommand ? "recorded" : record.validation.source ?? "unresolved",
+    source: validationCommand ? "recorded" : (record.validation.source ?? "unresolved"),
     status: nextValidationStatus,
   };
   record.finalStatus = finalStatus;

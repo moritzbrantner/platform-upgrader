@@ -233,7 +233,11 @@ jobs:
 `;
   }
 
-  if (workflowName === "beta-tier.yml" || workflowName === "main-tier.yml" || workflowName === "nightly-tier.yml") {
+  if (
+    workflowName === "beta-tier.yml" ||
+    workflowName === "main-tier.yml" ||
+    workflowName === "nightly-tier.yml"
+  ) {
     const { workflowLabel, checksCommand } = tierWorkflowDetails(workflowName);
     const branchName = workflowName.replace(".yml", "");
 
@@ -368,7 +372,9 @@ export function auditRepo(repoRoot: string): {
   }
 
   if (repoName === "next-template") {
-    if (existsSync(path.join(repoRoot, ".github", "workflows", "notify-monorepo-subtree-sync.yml"))) {
+    if (
+      existsSync(path.join(repoRoot, ".github", "workflows", "notify-monorepo-subtree-sync.yml"))
+    ) {
       issues.push("next-template still exposes subtree sync workflow");
     }
     const updateGuidePath = path.join(repoRoot, "docs", "updating-from-upstream.md");

@@ -6,8 +6,7 @@ import { ENVIRONMENT_SCRIPT, applyEnvironmentV1, auditEnvironmentV1 } from "./en
 export const BORING_FOUNDATION_VERSION = "boring-foundation-v1";
 export const RENOVATE_PRESET = "github>moritzbrantner/coding-agent-conventions";
 
-const ENVIRONMENT_SCAFFOLD_DRIFT =
-  "scripts/codex-environment.sh has environment-v1 scaffold drift";
+const ENVIRONMENT_SCAFFOLD_DRIFT = "scripts/codex-environment.sh has environment-v1 scaffold drift";
 
 type JsonObject = Record<string, unknown>;
 type FoundationStatus = "missing" | "valid" | "incomplete" | "conflict" | "delegated";
@@ -220,8 +219,9 @@ export function auditBoringFoundationV1(repoRoot: string) {
     .filter(([, value]) => value.status === "conflict")
     .map(([component, value]) => ({ component, ...value }));
   const pending: FoundationEntry[] = entries
-    .filter(([, value]) =>
-      value.status === "missing" || value.status === "incomplete" || value.status === "delegated",
+    .filter(
+      ([, value]) =>
+        value.status === "missing" || value.status === "incomplete" || value.status === "delegated",
     )
     .map(([component, value]) => ({ component, ...value }));
 
@@ -237,11 +237,7 @@ export function auditBoringFoundationV1(repoRoot: string) {
   };
 }
 
-function applyEnvironment(
-  repoRoot: string,
-  state: FoundationComponent,
-  changed: string[],
-): void {
+function applyEnvironment(repoRoot: string, state: FoundationComponent, changed: string[]): void {
   if (state.status === "valid" || state.status === "conflict") {
     return;
   }
@@ -306,11 +302,7 @@ function applyRenovate(repoRoot: string, state: FoundationComponent, changed: st
   changed.push("renovate.json");
 }
 
-function applyCodingTooling(
-  repoRoot: string,
-  state: FoundationComponent,
-  changed: string[],
-): void {
+function applyCodingTooling(repoRoot: string, state: FoundationComponent, changed: string[]): void {
   if (state.status !== "missing") {
     return;
   }
@@ -318,11 +310,7 @@ function applyCodingTooling(
   changed.push(".coding-tooling.json");
 }
 
-function applyAgentGuidance(
-  repoRoot: string,
-  state: FoundationComponent,
-  changed: string[],
-): void {
+function applyAgentGuidance(repoRoot: string, state: FoundationComponent, changed: string[]): void {
   if (state.status !== "missing") {
     return;
   }
