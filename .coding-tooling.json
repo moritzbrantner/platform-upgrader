@@ -6,5 +6,9 @@
     "full": ["format:check", "lint", "typecheck", "build", "test:unit"]
   },
   "requiredCapabilities": ["lint", "typecheck", "build", "test:unit"],
-  "optionalCapabilities": ["format:check"]
+  "optionalCapabilities": ["format:check"],
+  "merge": {
+    "authority": "hosted",
+    "requiredChecks": ["test"]
+  }
 }
