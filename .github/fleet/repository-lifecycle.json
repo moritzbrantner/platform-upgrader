@@ -112,6 +112,50 @@
     "history-to-md": {
       "status": "maintained",
       "reason": "maintained dormant Rust utility with explicit validation hardening"
+    },
+    "coding-agent-conventions": {
+      "status": "maintained",
+      "reason": "active shared coding-agent policy authority"
+    },
+    "coding-tooling": {
+      "status": "maintained",
+      "reason": "active deterministic repository-analysis authority"
+    },
+    "reusable-workflows": {
+      "status": "maintained",
+      "reason": "active shared CI enforcement and evidence workflows"
+    },
+    "platform-upgrader": {
+      "status": "maintained",
+      "reason": "active deterministic fleet repair and migration tool"
+    },
+    "runtime-profiler": {
+      "status": "maintained",
+      "reason": "active runtime profiling and performance evidence tool"
+    },
+    "repo-dashboard": {
+      "status": "maintained",
+      "reason": "active fleet visibility and repository health dashboard"
+    },
+    "rust-kernels": {
+      "status": "maintained",
+      "reason": "active shared deterministic Rust kernel library"
+    },
+    "3d-lab": {
+      "status": "maintained",
+      "reason": "active 3D semantics and rendering laboratory"
+    },
+    "collision-lab": {
+      "status": "maintained",
+      "reason": "active collision and physics verification laboratory"
+    },
+    "layout-lab": {
+      "status": "maintained",
+      "reason": "active layout semantics and renderer laboratory"
+    },
+    "server-lab": {
+      "status": "maintained",
+      "reason": "active server architecture and runtime laboratory"
     }
   }
 }
