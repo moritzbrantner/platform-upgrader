@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -263,6 +264,14 @@ function packageValidationCommand(packageJson: JsonObject): string | null {
   return `npm run ${script}`;
 }
 
+function repositoryTracksFile(repoRoot: string, relativePath: string): boolean {
+  const result = spawnSync("git", ["ls-files", "--error-unmatch", "--", relativePath], {
+    cwd: path.resolve(repoRoot),
+    stdio: "ignore",
+  });
+  return !result.error && result.status === 0;
+}
+
 export function repositoryValidationCommand(repoRoot: string): {
   command: string | null;
   source: string;
@@ -276,8 +285,9 @@ export function repositoryValidationCommand(repoRoot: string): {
   }
   if (existsSync(path.join(repoRoot, "Cargo.toml"))) {
     const lockfilePresent = existsSync(path.join(repoRoot, "Cargo.lock"));
+    const lockfileTracked = lockfilePresent && repositoryTracksFile(repoRoot, "Cargo.lock");
     return {
-      command: lockfilePresent ? "cargo test --locked" : "cargo test",
+      command: lockfileTracked ? "cargo test --locked" : "cargo test",
       source: "cargo",
     };
   }
