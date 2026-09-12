@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -18,6 +19,34 @@ function fixture() {
   const root = mkdtempSync(path.join(os.tmpdir(), "platform-upgrader-rollout-"));
   roots.push(root);
   return root;
+}
+
+function git(repoRoot, ...args) {
+  const result = spawnSync("git", args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.error || result.status !== 0) {
+    throw new Error(
+      result.error instanceof Error
+        ? result.error.message
+        : result.stderr?.trim() || `git ${args.join(" ")} failed`,
+    );
+  }
+}
+
+function commit(repoRoot, message) {
+  git(
+    repoRoot,
+    "-c",
+    "user.name=platform-upgrader-test",
+    "-c",
+    "user.email=platform-upgrader-test@example.invalid",
+    "commit",
+    "-m",
+    message,
+  );
 }
 
 function repository(fleetRoot, name, sha) {
@@ -78,11 +107,15 @@ describe("boring foundation rollout report", () => {
     expect(record.finalStatus).toBe("planned");
   });
 
-  test("uses Cargo locking only when the repository commits a lockfile", () => {
+  test("uses Cargo locking only when the repository tracks a lockfile", () => {
     const fleet = fixture();
     const repoRoot = path.join(fleet, "rust-workspace");
     mkdirSync(repoRoot, { recursive: true });
+    git(repoRoot, "init");
     writeFileSync(path.join(repoRoot, "Cargo.toml"), '[workspace]\nresolver = "2"\n');
+    writeFileSync(path.join(repoRoot, ".gitignore"), "Cargo.lock\n");
+    git(repoRoot, "add", "Cargo.toml", ".gitignore");
+    commit(repoRoot, "fixture without lockfile");
 
     expect(repositoryValidationCommand(repoRoot)).toEqual({
       command: "cargo test",
@@ -90,6 +123,13 @@ describe("boring foundation rollout report", () => {
     });
 
     writeFileSync(path.join(repoRoot, "Cargo.lock"), "version = 4\n");
+    expect(repositoryValidationCommand(repoRoot)).toEqual({
+      command: "cargo test",
+      source: "cargo",
+    });
+
+    git(repoRoot, "add", "-f", "Cargo.lock");
+    commit(repoRoot, "track lockfile");
     expect(repositoryValidationCommand(repoRoot)).toEqual({
       command: "cargo test --locked",
       source: "cargo",
