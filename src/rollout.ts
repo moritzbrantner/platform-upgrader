@@ -275,7 +275,11 @@ export function repositoryValidationCommand(repoRoot: string): {
     }
   }
   if (existsSync(path.join(repoRoot, "Cargo.toml"))) {
-    return { command: "cargo test --locked", source: "cargo" };
+    const lockfilePresent = existsSync(path.join(repoRoot, "Cargo.lock"));
+    return {
+      command: lockfilePresent ? "cargo test --locked" : "cargo test",
+      source: "cargo",
+    };
   }
   return { command: null, source: "unresolved" };
 }

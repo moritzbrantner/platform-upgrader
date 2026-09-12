@@ -8,6 +8,7 @@ import {
   buildBoringFoundationRolloutReport,
   recordRolloutResult,
   repositoryGitState,
+  repositoryValidationCommand,
   writeRolloutReport,
 } from "../src/rollout.js";
 
@@ -75,6 +76,24 @@ describe("boring foundation rollout report", () => {
     expect(record.proposedChanges.length).toBeGreaterThan(0);
     expect(record.validation.command).toBe("bun run ci");
     expect(record.finalStatus).toBe("planned");
+  });
+
+  test("uses Cargo locking only when the repository commits a lockfile", () => {
+    const fleet = fixture();
+    const repoRoot = path.join(fleet, "rust-workspace");
+    mkdirSync(repoRoot, { recursive: true });
+    writeFileSync(path.join(repoRoot, "Cargo.toml"), '[workspace]\nresolver = "2"\n');
+
+    expect(repositoryValidationCommand(repoRoot)).toEqual({
+      command: "cargo test",
+      source: "cargo",
+    });
+
+    writeFileSync(path.join(repoRoot, "Cargo.lock"), "version = 4\n");
+    expect(repositoryValidationCommand(repoRoot)).toEqual({
+      command: "cargo test --locked",
+      source: "cargo",
+    });
   });
 
   test("resumes an accepted repository only while the audited revision is unchanged", () => {
