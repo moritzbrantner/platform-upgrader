@@ -56,8 +56,8 @@ jobs:
         run: |
           set -euo pipefail
           bun install --frozen-lockfile
-          bun test tests/rollout.test.js
           bun run build
+          bun test tests/rollout.test.js
 
       - name: Commit durable fix and remove one-shot workflow
         run: |
