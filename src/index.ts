@@ -230,7 +230,7 @@ jobs:
       packages: read
     uses: ${PINNED_REF}/fast-validation.yml@${PINNED_VALIDATION_REVISION}
     with:
-      command: ${{ github.event_name == 'pull_request' && 'bun run lint && bun run test' || 'bun run lint && bun run test && bun run build' }}
+      command: \${{ github.event_name == 'pull_request' && 'bun run lint && bun run test' || 'bun run lint && bun run test && bun run build' }}
 `;
   }
 
