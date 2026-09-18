@@ -218,8 +218,10 @@ function normalizeWorkflow(repoRoot: string, workflowName: string): boolean {
     contents = `name: ${workflowDisplayName(workflowName)}
 
 on:
-  push:
   pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   validate:
@@ -228,9 +230,7 @@ jobs:
       packages: read
     uses: ${PINNED_REF}/fast-validation.yml@${PINNED_VALIDATION_REVISION}
     with:
-      test_command: bun run test
-      lint_command: bun run lint
-      build_command: bun run build
+      command: ${{ github.event_name == 'pull_request' && 'bun run lint && bun run test' || 'bun run lint && bun run test && bun run build' }}
 `;
   }
 
@@ -258,7 +258,7 @@ jobs:
       packages: read
     uses: ${PINNED_REF}/fast-validation.yml@${PINNED_VALIDATION_REVISION}
     with:
-      test_command: ${checksCommand}
+      command: ${checksCommand}
     secrets:
       node_auth_token: \${{ secrets.GH_PACKAGES_TOKEN }}
 `;
