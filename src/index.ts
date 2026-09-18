@@ -3,6 +3,7 @@ import path from "node:path";
 
 const PINNED_REF = "moritzbrantner/reusable-workflows/.github/workflows";
 const PINNED_TAG = "scaffold-v2-initial";
+const PINNED_VALIDATION_REVISION = "45042e56be120b438096e774027637cac0280075";
 
 type JsonObject = Record<string, unknown>;
 
@@ -217,19 +218,19 @@ function normalizeWorkflow(repoRoot: string, workflowName: string): boolean {
     contents = `name: ${workflowDisplayName(workflowName)}
 
 on:
-  push:
   pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   validate:
     permissions:
       contents: read
       packages: read
-    uses: ${PINNED_REF}/validate-repo.yml@${PINNED_TAG}
+    uses: ${PINNED_REF}/fast-validation.yml@${PINNED_VALIDATION_REVISION}
     with:
-      test_command: bun run test
-      lint_command: bun run lint
-      build_command: bun run build
+      command: \${{ github.event_name == 'pull_request' && 'bun run lint && bun run test' || 'bun run lint && bun run test && bun run build' }}
 `;
   }
 
@@ -255,9 +256,9 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: ${PINNED_REF}/validate-repo.yml@${PINNED_TAG}
+    uses: ${PINNED_REF}/fast-validation.yml@${PINNED_VALIDATION_REVISION}
     with:
-      test_command: ${checksCommand}
+      command: ${checksCommand}
     secrets:
       node_auth_token: \${{ secrets.GH_PACKAGES_TOKEN }}
 `;
