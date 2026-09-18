@@ -5,49 +5,76 @@ on:
     paths:
       - .github/fleet/repository-lifecycle.json
       - .github/workflows/boring-foundation-fleet.yml
-      - src/cli.js
-      - src/cli.ts
-      - src/environment.js
-      - src/environment.ts
-      - src/foundation.js
-      - src/foundation.ts
-      - src/foundation-authority.js
-      - src/foundation-authority.ts
-      - src/rollout.js
-      - src/rollout.ts
-      - tests/environment.test.js
-      - tests/foundation.test.js
-      - tests/foundation-authority.test.js
-      - tests/rollout.test.js
   push:
     branches:
       - main
     paths:
       - .github/fleet/repository-lifecycle.json
       - .github/workflows/boring-foundation-fleet.yml
-      - src/cli.js
-      - src/cli.ts
-      - src/environment.js
-      - src/environment.ts
-      - src/foundation.js
-      - src/foundation.ts
-      - src/foundation-authority.js
-      - src/foundation-authority.ts
-      - src/rollout.js
-      - src/rollout.ts
   schedule:
-    - cron: "17 3 * * *"
+    - cron: "17 3 * * 0"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: boring-foundation-fleet
+  group: boring-foundation-fleet-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
   audit:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout platform upgrader
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Validate fleet lifecycle manifest
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const manifest = JSON.parse(
+            fs.readFileSync(".github/fleet/repository-lifecycle.json", "utf8"),
+          );
+          if (manifest.schemaVersion !== 1) {
+            throw new Error(`Unsupported lifecycle schema version: ${manifest.schemaVersion}`);
+          }
+          if (
+            typeof manifest.repositories !== "object" ||
+            manifest.repositories === null ||
+            Array.isArray(manifest.repositories)
+          ) {
+            throw new Error("Lifecycle manifest must contain a repositories object");
+          }
+
+          const allowedStatuses = new Set(["maintained", "archived", "retired", "historical"]);
+          for (const [name, entry] of Object.entries(manifest.repositories)) {
+            if (!/^[A-Za-z0-9._-]+$/.test(name)) {
+              throw new Error(`Unsafe repository name in lifecycle manifest: ${name}`);
+            }
+            if (
+              typeof entry !== "object" ||
+              entry === null ||
+              Array.isArray(entry) ||
+              !allowedStatuses.has(entry.status)
+            ) {
+              throw new Error(`Invalid lifecycle entry for ${name}`);
+            }
+            if (typeof entry.reason !== "string" || !entry.reason.trim()) {
+              throw new Error(`Lifecycle entry for ${name} must explain why it is tracked`);
+            }
+          }
+
+          console.log(
+            `Lifecycle manifest is structurally valid for ${Object.keys(manifest.repositories).length} repositories.`,
+          );
+          NODE
+
+  observe:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout platform upgrader
@@ -102,7 +129,7 @@ jobs:
               "$GITHUB_WORKSPACE/fleet/$repo"
           done < "$RUNNER_TEMP/fleet-repositories.txt"
 
-      - name: Audit maintained fleet through coding-tooling authority
+      - name: Observe maintained fleet through coding-tooling authority
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/boring-foundation-fleet"
@@ -117,17 +144,23 @@ jobs:
           const reportPath = process.env.RUNNER_TEMP + "/boring-foundation-fleet/report.json";
           const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
           const blockers = report.repositories.filter((repo) => repo.finalStatus === "blocked");
+
           if (blockers.length > 0) {
-            console.error(
-              `Fleet audit blocked: ${blockers.map((repo) => repo.name).join(", ")}`,
+            console.log(
+              `::warning::Fleet observation found blocked repositories: ${blockers
+                .map((repo) => repo.name)
+                .join(", ")}`,
             );
-            process.exit(1);
           }
+
+          console.log(
+            `Fleet observation completed: ${report.repositories.length} repositories, ${blockers.length} blocked.`,
+          );
           NODE
 
           cat "$RUNNER_TEMP/boring-foundation-fleet/report.json"
           {
-            echo '## Boring foundation fleet audit'
+            echo '## Boring foundation fleet observation'
             echo
             echo 'Authority: `coding-tooling foundation audit`'
             echo
@@ -135,14 +168,20 @@ jobs:
             echo
             echo 'Current checkout boundary: public repositories only'
             echo
-            echo '```json'
+            echo 'Blocked repositories are reported here but do not fail unrelated repository work.'
+            echo
+            echo 'Repository-owned candidate validation remains the acceptance authority.'
+            echo
+            echo '~~~json'
             cat "$RUNNER_TEMP/boring-foundation-fleet/report.json"
-            echo '```'
+            echo '~~~'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload fleet report
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: boring-foundation-fleet
           path: ${{ runner.temp }}/boring-foundation-fleet/report.json
           retention-days: 14
+          if-no-files-found: ignore
