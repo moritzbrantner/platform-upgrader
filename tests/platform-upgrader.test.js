@@ -55,6 +55,39 @@ describe("platform-upgrader apply scaffold-v2", () => {
           path.join(tempRoot, "electron-template", "scripts", "dispatch-monorepo-update.mjs"),
         ),
       ).toBe(false);
+
+      const streamlinedWorkflows = [
+        ["monorepo", "main.yml"],
+        ["expo-template", "validate.yml"],
+        ["electron-template", "ci.yml"],
+        ["next-template", "beta-tier.yml"],
+        ["next-template", "main-tier.yml"],
+        ["next-template", "nightly-tier.yml"],
+      ];
+      for (const [repoName, workflowName] of streamlinedWorkflows) {
+        const workflow = await readFile(
+          path.join(tempRoot, repoName, ".github", "workflows", workflowName),
+          "utf8",
+        );
+        expect(workflow).toContain(
+          "fast-validation.yml@45042e56be120b438096e774027637cac0280075",
+        );
+        expect(workflow).not.toContain("validate-repo.yml");
+      }
+
+      for (const [repoName, workflowName] of [
+        ["monorepo", "main.yml"],
+        ["expo-template", "validate.yml"],
+        ["electron-template", "ci.yml"],
+      ]) {
+        const workflow = await readFile(
+          path.join(tempRoot, repoName, ".github", "workflows", workflowName),
+          "utf8",
+        );
+        expect(workflow).toContain("branches: [main]");
+        expect(workflow).toContain("workflow_dispatch:");
+        expect(workflow).toContain("github.event_name == 'pull_request'");
+      }
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
