@@ -74,9 +74,13 @@ The platform upgrader changes structure; it does not decide whether application 
 
 A candidate is not accepted merely because the migration completed successfully.
 
-### 4. Roll out through explicit evidence
+### 4. Publish repository-owned evidence
 
-For multiple repositories, create a resumable rollout report:
+The normal evidence flow is push-first: the repository that owns a source revision runs its own promoted checks and publishes the resulting state for that exact revision. Shared workflows should carry caller-established source identity forward instead of repeatedly rediscovering it.
+
+Fleet consumers such as the dashboard aggregate those repository-owned observations. A stale or blocked repository remains visible, but it does not make an unrelated repository's pull request fail.
+
+For a bounded multi-repository migration or periodic reconciliation, create a resumable rollout report:
 
 ```bash
 bunx @moritzbrantner/platform-upgrader rollout plan boring-foundation-v1 ~/src \
@@ -95,7 +99,9 @@ bunx @moritzbrantner/platform-upgrader rollout record ./boring-foundation-rollou
   --validation-status green
 ```
 
-The rollout report is evidence, not hidden orchestration state. It should preserve the audited revision, detected stack, component states, proposed changes, conflicts, validation command, PR/commit identity, and final disposition.
+The rollout report is reconciliation evidence, not hidden orchestration state and not a global merge gate. It should preserve the audited revision, detected stack, component states, proposed changes, conflicts, validation command, PR/commit identity, and final disposition.
+
+The central public-fleet workflow is therefore a backstop: it runs after lifecycle-policy changes, on a weekly schedule, or manually. It reports blocked repositories without failing unrelated work. Foundation implementation changes are exercised against bounded canaries, while an actual migration candidate is accepted only by the affected repository's own deterministic validation.
 
 ## Reading foundation state
 
@@ -152,12 +158,12 @@ When extending the fleet foundation, use this sequence:
 4. add a minimal idempotent repair only where ownership belongs in `platform-upgrader`;
 5. validate repaired repositories with their own gates;
 6. expose actionable state in the dashboard;
-7. promote mature checks into reusable CI and unattended-merge requirements.
+7. promote mature checks into repository-owned reusable CI; aggregate their results centrally without recreating the repository gate.
 
 A useful representative dogfood set includes a Rust library, a Rust/Wasm/Next.js lab, a TypeScript project, an Expo repository, and one mixed/complex repository.
 
 ## Failure policy
 
-Fleet automation should fail closed when the evidence needed for a safe mutation is missing, contradictory, stale, or unsupported. It should not silently invent policy, normalize ambiguous repository-owned configuration, weaken validation, or merge around a failed exact-head check.
+Mutation and candidate acceptance should fail closed when the affected repository lacks the evidence needed for a safe change, or when that evidence is contradictory, stale, or unsupported. Fleet-wide observation should surface those states without turning one repository's drift into another repository's blocker. Automation must not silently invent policy, normalize ambiguous repository-owned configuration, weaken validation, or merge around a failed exact-head check.
 
-The goal is not to make every repository look identical. The goal is to make every maintained repository understandable, reproducible, measurable, repairable, and safe to automate through one coherent fleet contract.
+The goal is not to make every repository look identical or to continuously re-prove the entire fleet. The goal is to make every maintained repository understandable, reproducible, measurable, repairable, and safe to automate through a thin common contract.
