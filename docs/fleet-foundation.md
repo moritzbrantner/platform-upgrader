@@ -164,6 +164,6 @@ A useful representative dogfood set includes a Rust library, a Rust/Wasm/Next.js
 
 ## Failure policy
 
-Mutation and candidate acceptance should fail closed when the affected repository lacks the evidence needed for a safe change, or when that evidence is contradictory, stale, or unsupported. Fleet-wide observation should surface those states without turning one repository's drift into another repository's blocker. Automation must not silently invent policy, normalize ambiguous repository-owned configuration, weaken validation, or merge around a failed exact-head check.
+Mutation and candidate acceptance should fail closed when the affected repository lacks the evidence needed for a safe change, or when that evidence is contradictory, stale, or unsupported. Fleet-wide observation should surface those states without turning one repository's drift into another repository's blocker. Automation must not silently invent policy, normalize ambiguous repository-owned configuration, weaken validation, or merge around a failed required GitHub check.
 
 The goal is not to make every repository look identical or to continuously re-prove the entire fleet. The goal is to make every maintained repository understandable, reproducible, measurable, repairable, and safe to automate through a thin common contract.
