@@ -70,9 +70,18 @@ describe("platform-upgrader apply scaffold-v2", () => {
           "utf8",
         );
         expect(workflow).toContain(
-          "fast-validation.yml@45042e56be120b438096e774027637cac0280075",
+          "fast-validation.yml@main",
         );
         expect(workflow).not.toContain("validate-repo.yml");
+      }
+
+      for (const repoName of ["monorepo", "next-template", "expo-template", "electron-template"]) {
+        const config = JSON.parse(await readFile(path.join(tempRoot, repoName, ".platform-upgrader.json"), "utf8"));
+        expect(config.workflowMode).toBe("current-reusable");
+      }
+      for (const workflowName of ["release.yml", "snapshot-stage.yml"]) {
+        const workflow = await readFile(path.join(tempRoot, "monorepo", ".github", "workflows", workflowName), "utf8");
+        expect(workflow).toContain("@main");
       }
 
       for (const [repoName, workflowName] of [
