@@ -8,7 +8,10 @@ function usesCurrentWorkflow(filePath: string): boolean {
     existsSync(filePath) &&
     readText(filePath)
       .split("\n")
-      .some((line) => line.includes(`uses: ${CURRENT_WORKFLOWS}/`) && line.includes("@main"))
+      .some((line) => {
+        const action = line.match(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/)?.[1];
+        return action?.startsWith(`${CURRENT_WORKFLOWS}/`) && action.endsWith("@main");
+      })
   );
 }
 
