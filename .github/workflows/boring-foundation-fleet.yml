@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout platform upgrader
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@v6
 
       - name: Validate fleet lifecycle manifest
         shell: bash
@@ -78,19 +78,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout platform upgrader
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@v6
         with:
           path: upgrader
 
       - name: Checkout coding-tooling authority
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@v6
         with:
           repository: moritzbrantner/coding-tooling
           path: coding-tooling
           persist-credentials: false
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.0
 
@@ -179,7 +179,7 @@ jobs:
 
       - name: Upload fleet report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@v7
         with:
           name: boring-foundation-fleet
           path: ${{ runner.temp }}/boring-foundation-fleet/report.json
