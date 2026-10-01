@@ -3,6 +3,7 @@ name: Validate
 on:
   pull_request:
   push:
+    branches: [main]
 
 permissions:
   contents: read
@@ -11,7 +12,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@v6
       - id: bun-version
         shell: bash
         run: |
@@ -26,7 +27,7 @@ jobs:
   findings:
     permissions:
       contents: read
-    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@10d3ac3c0754cf075a43f17dcc3c84d1967d3061
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@main
     with:
       operation: findings
       report_path: .artifacts/coding-tooling/findings.json
