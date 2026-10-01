@@ -138,6 +138,42 @@ describe("workflow-profile-v1", () => {
     ]);
   });
 
+  test("rejects malformed existing exceptions before destructive reconciliation", () => {
+    const root = fixture();
+    const catalogPath = catalog(root);
+    write(root, ".github/workflows/validate.yml", "name: Validate\n");
+    write(root, ".github/workflows/beta-tier.yml", "name: Legacy beta\n");
+    write(
+      root,
+      ".github/workflow-profile.json",
+      `${JSON.stringify({
+        schemaVersion: 1,
+        catalog: "workflow-profiles-v1",
+        catalogDigest: `sha256:${"0".repeat(64)}`,
+        profile: "application",
+        enabledRoles: ["validate"],
+        workflows: { validate: ".github/workflows/validate.yml" },
+        exceptions: [
+          {
+            path: ".github/workflows/beta-tier.yml",
+            reason: "short",
+          },
+        ],
+      })}\n`,
+    );
+
+    const audit = auditWorkflowProfileV1(root, catalogPath);
+    expect(audit.ok).toBe(false);
+    expect(audit.issues).toContain(
+      "Each workflow exception requires a canonical path and concrete reason",
+    );
+
+    expect(() =>
+      applyWorkflowProfileV1(root, catalogPath, "application", ["validate"]),
+    ).toThrow("Each workflow exception requires a canonical path and concrete reason");
+    expect(existsSync(path.join(root, ".github/workflows/beta-tier.yml"))).toBe(true);
+  });
+
   test("is idempotent after convergence", () => {
     const root = fixture();
     const catalogPath = catalog(root);
