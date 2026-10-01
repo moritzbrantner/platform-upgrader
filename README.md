@@ -17,8 +17,8 @@ Apply a deterministic structural migration:
 ```bash
 bunx @moritzbrantner/platform-upgrader apply scaffold-v2 .
 bunx @moritzbrantner/platform-upgrader apply environment-v1 .
-bunx @moritzbrantner/platform-upgrader apply workflow-profile-v1 . \\
-  --catalog ../reusable-workflows/profiles/workflow-profiles.json \\
+bunx @moritzbrantner/platform-upgrader apply workflow-profile-v1 . \
+  --catalog ../reusable-workflows/profiles/workflow-profiles.json \
   --profile application --roles validate,pages
 ```
 
