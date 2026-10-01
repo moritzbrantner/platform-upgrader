@@ -1,8 +1,19 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-const PINNED_REF = "moritzbrantner/reusable-workflows/.github/workflows";
-const PINNED_TAG = "scaffold-v2-initial";
+const CURRENT_WORKFLOWS = "moritzbrantner/reusable-workflows/.github/workflows";
+
+function usesCurrentWorkflow(filePath: string): boolean {
+  return (
+    existsSync(filePath) &&
+    readText(filePath)
+      .split("\n")
+      .some((line) => {
+        const action = line.match(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/)?.[1];
+        return action?.startsWith(`${CURRENT_WORKFLOWS}/`) && action.endsWith("@main");
+      })
+  );
+}
 
 type JsonObject = Record<string, unknown>;
 
@@ -148,7 +159,7 @@ This repo no longer assumes subtree sync or upstream folder merges.
 ## Update order
 
 1. Adopt released runtime package updates from \`platform-packages\`.
-2. Adopt pinned reusable workflow updates.
+2. Follow current reusable workflow updates.
 3. Apply structural repo migrations through \`@moritzbrantner/platform-upgrader\`.
 `;
   if (readText(filePath) === nextSource) {
@@ -217,19 +228,19 @@ function normalizeWorkflow(repoRoot: string, workflowName: string): boolean {
     contents = `name: ${workflowDisplayName(workflowName)}
 
 on:
-  push:
   pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   validate:
     permissions:
       contents: read
       packages: read
-    uses: ${PINNED_REF}/validate-repo.yml@${PINNED_TAG}
+    uses: ${CURRENT_WORKFLOWS}/fast-validation.yml@main
     with:
-      test_command: bun run test
-      lint_command: bun run lint
-      build_command: bun run build
+      command: \${{ github.event_name == 'pull_request' && 'bun run lint && bun run test' || 'bun run lint && bun run test && bun run build' }}
 `;
   }
 
@@ -255,9 +266,9 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: ${PINNED_REF}/validate-repo.yml@${PINNED_TAG}
+    uses: ${CURRENT_WORKFLOWS}/fast-validation.yml@main
     with:
-      test_command: ${checksCommand}
+      command: ${checksCommand}
     secrets:
       node_auth_token: \${{ secrets.GH_PACKAGES_TOKEN }}
 `;
@@ -274,7 +285,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: ${PINNED_REF}/release-template.yml@${PINNED_TAG}
+    uses: ${CURRENT_WORKFLOWS}/release-template.yml@main
     with:
       release_type: scaffold-v2
       validate_command: bun run build
@@ -310,7 +321,7 @@ jobs:
     if: inputs.promote && inputs.promote_to != ''
     permissions:
       contents: write
-    uses: ${PINNED_REF}/promote-branches.yml@${PINNED_TAG}
+    uses: ${CURRENT_WORKFLOWS}/promote-branches.yml@main
     with:
       source_branch: \${{ inputs.stage }}
       target_branch: \${{ inputs.promote_to }}
@@ -342,8 +353,8 @@ export function auditRepo(repoRoot: string): {
   const repoName = path.basename(repoRoot);
   const issues: string[] = [];
 
-  if (config.workflowMode !== "pinned-reusable") {
-    issues.push("workflowMode must be pinned-reusable");
+  if (config.workflowMode !== "current-reusable") {
+    issues.push("workflowMode must be current-reusable");
   }
 
   if (repoName === "monorepo") {
@@ -352,8 +363,8 @@ export function auditRepo(repoRoot: string): {
     }
     for (const workflow of ["main.yml", "release.yml", "snapshot-stage.yml"]) {
       const filePath = path.join(repoRoot, ".github", "workflows", workflow);
-      if (!existsSync(filePath) || !readText(filePath).includes(PINNED_REF)) {
-        issues.push(`${workflow} is not using pinned reusable workflows`);
+      if (!usesCurrentWorkflow(filePath)) {
+        issues.push(`${workflow} is not using current reusable workflows`);
       }
     }
   } else {
@@ -383,8 +394,8 @@ export function auditRepo(repoRoot: string): {
     }
     for (const workflow of ["beta-tier.yml", "main-tier.yml", "nightly-tier.yml"]) {
       const filePath = path.join(repoRoot, ".github", "workflows", workflow);
-      if (!existsSync(filePath) || !readText(filePath).includes(PINNED_REF)) {
-        issues.push(`${workflow} is not using pinned reusable workflows`);
+      if (!usesCurrentWorkflow(filePath)) {
+        issues.push(`${workflow} is not using current reusable workflows`);
       }
     }
   }
@@ -397,8 +408,8 @@ export function auditRepo(repoRoot: string): {
       issues.push("expo-template still has example.spec.ts");
     }
     const validateWorkflow = path.join(repoRoot, ".github", "workflows", "validate.yml");
-    if (!existsSync(validateWorkflow) || !readText(validateWorkflow).includes(PINNED_REF)) {
-      issues.push("expo-template validate workflow is not using pinned reusable workflows");
+    if (!usesCurrentWorkflow(validateWorkflow)) {
+      issues.push("expo-template validate workflow is not using current reusable workflows");
     }
   }
 
@@ -413,8 +424,8 @@ export function auditRepo(repoRoot: string): {
       issues.push("electron-template desktop smoke suite is missing");
     }
     const ciWorkflow = path.join(repoRoot, ".github", "workflows", "ci.yml");
-    if (!existsSync(ciWorkflow) || !readText(ciWorkflow).includes(PINNED_REF)) {
-      issues.push("electron-template CI workflow is not using pinned reusable workflows");
+    if (!usesCurrentWorkflow(ciWorkflow)) {
+      issues.push("electron-template CI workflow is not using current reusable workflows");
     }
   }
 
@@ -430,10 +441,16 @@ export function applyScaffoldV2(repoRoot: string): {
   repoName: string;
   changed: string[];
 } {
-  ensureConfig(repoRoot);
+  const config = ensureConfig(repoRoot);
 
   const changes: string[] = [];
   const repoName = path.basename(repoRoot);
+
+  if (config.workflowMode !== "current-reusable") {
+    config.workflowMode = "current-reusable";
+    writeJson(path.join(repoRoot, ".platform-upgrader.json"), config);
+    changes.push(".platform-upgrader.json");
+  }
 
   if (repoName === "monorepo" && ensureMonorepoBaseline(repoRoot)) {
     changes.push("SCAFFOLD_V2.md");

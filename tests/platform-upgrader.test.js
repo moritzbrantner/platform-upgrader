@@ -1,4 +1,4 @@
-import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -55,6 +55,48 @@ describe("platform-upgrader apply scaffold-v2", () => {
           path.join(tempRoot, "electron-template", "scripts", "dispatch-monorepo-update.mjs"),
         ),
       ).toBe(false);
+
+      const streamlinedWorkflows = [
+        ["monorepo", "main.yml"],
+        ["expo-template", "validate.yml"],
+        ["electron-template", "ci.yml"],
+        ["next-template", "beta-tier.yml"],
+        ["next-template", "main-tier.yml"],
+        ["next-template", "nightly-tier.yml"],
+      ];
+      for (const [repoName, workflowName] of streamlinedWorkflows) {
+        const workflow = await readFile(
+          path.join(tempRoot, repoName, ".github", "workflows", workflowName),
+          "utf8",
+        );
+        expect(workflow).toContain(
+          "fast-validation.yml@main",
+        );
+        expect(workflow).not.toContain("validate-repo.yml");
+      }
+
+      for (const repoName of ["monorepo", "next-template", "expo-template", "electron-template"]) {
+        const config = JSON.parse(await readFile(path.join(tempRoot, repoName, ".platform-upgrader.json"), "utf8"));
+        expect(config.workflowMode).toBe("current-reusable");
+      }
+      for (const workflowName of ["release.yml", "snapshot-stage.yml"]) {
+        const workflow = await readFile(path.join(tempRoot, "monorepo", ".github", "workflows", workflowName), "utf8");
+        expect(workflow).toContain("@main");
+      }
+
+      for (const [repoName, workflowName] of [
+        ["monorepo", "main.yml"],
+        ["expo-template", "validate.yml"],
+        ["electron-template", "ci.yml"],
+      ]) {
+        const workflow = await readFile(
+          path.join(tempRoot, repoName, ".github", "workflows", workflowName),
+          "utf8",
+        );
+        expect(workflow).toContain("branches: [main]");
+        expect(workflow).toContain("workflow_dispatch:");
+        expect(workflow).toContain("github.event_name == 'pull_request'");
+      }
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -76,6 +118,21 @@ describe("platform-upgrader audit", () => {
         expect(result.ok).toBe(true);
         expect(result.issues).toEqual([]);
       }
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects workflow refs that only start with main", async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "platform-upgrader-ref-audit-"));
+    try {
+      const targetRoot = path.join(tempRoot, "expo-template");
+      await cp(path.join(repoRoot, "tests", "fixtures", "expo-template"), targetRoot, { recursive: true });
+      applyScaffoldV2(targetRoot);
+      const workflowPath = path.join(targetRoot, ".github", "workflows", "validate.yml");
+      const workflow = await readFile(workflowPath, "utf8");
+      await writeFile(workflowPath, workflow.replace("fast-validation.yml@main", "fast-validation.yml@main-frozen"));
+      expect(auditRepo(targetRoot).issues).toContain("expo-template validate workflow is not using current reusable workflows");
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
