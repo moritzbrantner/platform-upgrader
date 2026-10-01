@@ -111,32 +111,43 @@ function actualWorkflowPaths(repoRoot: string): string[] {
     .sort();
 }
 
+function parseExceptions(value: unknown): WorkflowException[] {
+  if (!Array.isArray(value)) {
+    throw new Error("exceptions must be an array");
+  }
+
+  const exceptions: WorkflowException[] = [];
+  const seen = new Set<string>();
+  for (const entry of value) {
+    if (
+      !isRecord(entry) ||
+      typeof entry.path !== "string" ||
+      !WORKFLOW_PATH.test(entry.path) ||
+      typeof entry.reason !== "string" ||
+      entry.reason.trim().length < 8
+    ) {
+      throw new Error("Each workflow exception requires a canonical path and concrete reason");
+    }
+    if (seen.has(entry.path)) {
+      throw new Error(`Duplicate workflow exception: ${entry.path}`);
+    }
+    seen.add(entry.path);
+    exceptions.push({ path: entry.path, reason: entry.reason });
+  }
+  return exceptions;
+}
+
 function readExceptions(repoRoot: string): WorkflowException[] {
   const declarationPath = path.join(repoRoot, DECLARATION_PATH);
   if (!existsSync(declarationPath)) {
     return [];
   }
 
-  try {
-    const value = JSON.parse(readText(declarationPath)) as unknown;
-    if (!isRecord(value) || !Array.isArray(value.exceptions)) {
-      return [];
-    }
-    return value.exceptions.flatMap((entry) => {
-      if (
-        !isRecord(entry) ||
-        typeof entry.path !== "string" ||
-        !WORKFLOW_PATH.test(entry.path) ||
-        typeof entry.reason !== "string" ||
-        entry.reason.trim().length < 8
-      ) {
-        return [];
-      }
-      return [{ path: entry.path, reason: entry.reason }];
-    });
-  } catch {
-    return [];
+  const value = JSON.parse(readText(declarationPath)) as unknown;
+  if (!isRecord(value)) {
+    throw new Error(`${DECLARATION_PATH} must contain a JSON object`);
   }
+  return parseExceptions(value.exceptions ?? []);
 }
 
 function resolveDeclaration(
@@ -224,18 +235,15 @@ function declarationIssues(
   const enabledRoles = Array.isArray(value.enabledRoles)
     ? value.enabledRoles.filter((entry): entry is string => typeof entry === "string")
     : [];
-  const exceptions = Array.isArray(value.exceptions)
-    ? value.exceptions.flatMap((entry) => {
-        if (
-          !isRecord(entry) ||
-          typeof entry.path !== "string" ||
-          typeof entry.reason !== "string"
-        ) {
-          return [];
-        }
-        return [{ path: entry.path, reason: entry.reason }];
-      })
-    : [];
+  let exceptions: WorkflowException[];
+  try {
+    exceptions = parseExceptions(value.exceptions ?? []);
+  } catch (error) {
+    return {
+      declaration: null,
+      issues: [error instanceof Error ? error.message : String(error)],
+    };
+  }
 
   let expected: WorkflowProfileDeclaration;
   try {
