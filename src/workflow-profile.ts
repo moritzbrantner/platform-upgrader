@@ -102,7 +102,9 @@ function loadCatalog(catalogPath: string): {
 
 function actualWorkflowPaths(repoRoot: string): string[] {
   const directory = path.join(repoRoot, ".github", "workflows");
-  if (!existsSync(directory)) return [];
+  if (!existsSync(directory)) {
+    return [];
+  }
   return readdirSync(directory, { withFileTypes: true })
     .filter((entry) => entry.isFile() && /\.ya?ml$/.test(entry.name))
     .map((entry) => `.github/workflows/${entry.name}`)
@@ -111,7 +113,9 @@ function actualWorkflowPaths(repoRoot: string): string[] {
 
 function readExceptions(repoRoot: string): WorkflowException[] {
   const declarationPath = path.join(repoRoot, DECLARATION_PATH);
-  if (!existsSync(declarationPath)) return [];
+  if (!existsSync(declarationPath)) {
+    return [];
+  }
 
   try {
     const value = JSON.parse(readText(declarationPath)) as unknown;
@@ -141,7 +145,9 @@ function resolveDeclaration(
   exceptions: WorkflowException[],
 ): WorkflowProfileDeclaration {
   const profile = catalog.profiles[profileId];
-  if (!profile) throw new Error(`Unknown workflow profile: ${profileId}`);
+  if (!profile) {
+    throw new Error(`Unknown workflow profile: ${profileId}`);
+  }
 
   const uniqueRoles = [...new Set(enabledRoles)];
   if (uniqueRoles.length !== enabledRoles.length || uniqueRoles.some((role) => role.trim() === "")) {
@@ -240,9 +246,15 @@ function declarationIssues(
   }
 
   const issues: string[] = [];
-  if (value.schemaVersion !== 1) issues.push("schemaVersion must be 1");
-  if (value.catalog !== "workflow-profiles-v1") issues.push("catalog must be workflow-profiles-v1");
-  if (value.catalogDigest !== digest) issues.push("catalogDigest does not match the supplied catalog");
+  if (value.schemaVersion !== 1) {
+    issues.push("schemaVersion must be 1");
+  }
+  if (value.catalog !== "workflow-profiles-v1") {
+    issues.push("catalog must be workflow-profiles-v1");
+  }
+  if (value.catalogDigest !== digest) {
+    issues.push("catalogDigest does not match the supplied catalog");
+  }
   if (!isRecord(value.workflows)) {
     issues.push("workflows must be an object");
   } else if (JSON.stringify(value.workflows) !== JSON.stringify(expected.workflows)) {
@@ -308,9 +320,13 @@ export function applyWorkflowProfileV1(
   const expected = new Set(Object.values(declaration.workflows));
   const excepted = new Set(declaration.exceptions.map((entry) => entry.path));
   for (const legacyPath of catalog.legacyWorkflowPaths) {
-    if (expected.has(legacyPath) || excepted.has(legacyPath)) continue;
+    if (expected.has(legacyPath) || excepted.has(legacyPath)) {
+      continue;
+    }
     const absolute = path.join(repoRoot, legacyPath);
-    if (!existsSync(absolute)) continue;
+    if (!existsSync(absolute)) {
+      continue;
+    }
     rmSync(absolute, { force: true });
     changed.push(legacyPath);
   }
