@@ -55,7 +55,7 @@ describe("platform-upgrader CLI", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
-      'Supported migrations are "scaffold-v2", "environment-v1", and "boring-foundation-v1".',
+      'Supported migrations are "scaffold-v2", "environment-v1", "boring-foundation-v1", and "workflow-profile-v1".',
     );
   });
 
