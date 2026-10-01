@@ -283,8 +283,9 @@ on:
 jobs:
   release:
     permissions:
-      contents: read
-      packages: read
+      contents: write
+      packages: write
+      id-token: write
     uses: ${CURRENT_WORKFLOWS}/release-template.yml@main
     with:
       release_type: scaffold-v2

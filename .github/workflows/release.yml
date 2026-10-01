@@ -9,12 +9,13 @@ on:
 jobs:
   release:
     permissions:
-      contents: read
+      contents: write
       packages: write
-    uses: moritzbrantner/reusable-workflows/.github/workflows/release-template.yml@scaffold-v2-release-auth
+      id-token: write
+    uses: moritzbrantner/reusable-workflows/.github/workflows/release-template.yml@main
     with:
-      bun_version: 1.4.0
-      install_command: bun install --no-save
+      bun_version: 1.4.2
+      install_command: bun install --frozen-lockfile
       validate_command: bun run check
       release_type: package
       release_command: bun run release:publish
