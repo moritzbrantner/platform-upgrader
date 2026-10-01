@@ -119,7 +119,9 @@ function readExceptions(repoRoot: string): WorkflowException[] {
 
   try {
     const value = JSON.parse(readText(declarationPath)) as unknown;
-    if (!isRecord(value) || !Array.isArray(value.exceptions)) return [];
+    if (!isRecord(value) || !Array.isArray(value.exceptions)) {
+      return [];
+    }
     return value.exceptions.flatMap((entry) => {
       if (
         !isRecord(entry) ||
