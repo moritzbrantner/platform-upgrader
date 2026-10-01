@@ -23,7 +23,7 @@
     "lint": "bunx oxlint@1.80.0 --format=github src/*.ts",
     "release:publish": "bun run build && node scripts/publish-package.mjs",
     "test": "bun run build && bun run test:unit",
-    "test:unit": "bun test ./tests/platform-upgrader.test.js ./tests/environment.test.js ./tests/foundation.test.js ./tests/foundation-authority.test.js ./tests/refresh.test.js ./tests/cli.test.js ./tests/reconciliation.test.js ./tests/rollout.test.js",
+    "test:unit": "bun test ./tests/platform-upgrader.test.js ./tests/environment.test.js ./tests/foundation.test.js ./tests/foundation-authority.test.js ./tests/refresh.test.js ./tests/cli.test.js ./tests/reconciliation.test.js ./tests/rollout.test.js ./tests/workflow-profile.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

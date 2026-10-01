@@ -13,6 +13,7 @@ import {
   recordRolloutResult,
   writeRolloutReport,
 } from "./rollout.js";
+import { applyWorkflowProfileV1, auditWorkflowProfileV1 } from "./workflow-profile.js";
 
 function resolveRepoRoot(inputPath: string | undefined): string {
   return path.resolve(process.cwd(), inputPath ?? ".");
@@ -125,6 +126,22 @@ if (command === "rollout" && first === "record") {
 }
 
 if (command === "audit") {
+  if (first === "workflow-profile-v1") {
+    const catalogOption = optionValue(args, "catalog");
+    if (!catalogOption) {
+      console.error(
+        "Usage: platform-upgrader audit workflow-profile-v1 [path] --catalog <workflow-profiles.json>",
+      );
+      process.exit(1);
+    }
+    const result = auditWorkflowProfileV1(
+      resolveRepoRoot(optionalPath(second)),
+      path.resolve(process.cwd(), catalogOption),
+    );
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(result.ok ? 0 : 1);
+  }
+
   if (first === "boring-foundation-v1") {
     const result = auditBoringFoundationV1(resolveRepoRoot(optionalPath(second)), {
       codingToolingRoot: codingToolingRoot(args),
@@ -152,6 +169,34 @@ if (command === "audit") {
 
 if (command === "apply") {
   const repoRoot = resolveRepoRoot(optionalPath(second));
+  if (first === "workflow-profile-v1") {
+    const catalogOption = optionValue(args, "catalog");
+    const profile = optionValue(args, "profile");
+    const rolesOption = optionValue(args, "roles");
+    if (!catalogOption || !profile || !rolesOption) {
+      console.error(
+        "Usage: platform-upgrader apply workflow-profile-v1 [path] --catalog <workflow-profiles.json> --profile <id> --roles <role,...>",
+      );
+      process.exit(1);
+    }
+    try {
+      const result = applyWorkflowProfileV1(
+        repoRoot,
+        path.resolve(process.cwd(), catalogOption),
+        profile,
+        rolesOption
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean),
+      );
+      console.log(JSON.stringify(result, null, 2));
+      process.exit(result.audit.ok ? 0 : 1);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  }
+
   if (first === "scaffold-v2") {
     const result = applyScaffoldV2(repoRoot);
     console.log(JSON.stringify(result, null, 2));
@@ -171,7 +216,7 @@ if (command === "apply") {
   }
 
   console.error(
-    'Supported migrations are "scaffold-v2", "environment-v1", and "boring-foundation-v1".',
+    'Supported migrations are "scaffold-v2", "environment-v1", "boring-foundation-v1", and "workflow-profile-v1".',
   );
   process.exit(1);
 }
@@ -211,6 +256,6 @@ if (command === "hold" && first === "clear") {
 }
 
 console.error(
-  "Usage: platform-upgrader <audit [boring-foundation-v1] [path] [--coding-tooling-root <path>] | apply <scaffold-v2|environment-v1|boring-foundation-v1> [path] [--coding-tooling-root <path>] | rollout <plan|record> ... | refresh latest-stable [path] | hold <record|clear> ...>",
+  "Usage: platform-upgrader <audit <boring-foundation-v1|workflow-profile-v1> [path] ... | apply <scaffold-v2|environment-v1|boring-foundation-v1|workflow-profile-v1> [path] ... | rollout <plan|record> ... | refresh latest-stable [path] | hold <record|clear> ...>",
 );
 process.exit(1);
