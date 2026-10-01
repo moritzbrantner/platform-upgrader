@@ -7,13 +7,13 @@ import process from "node:process";
 import { applyEnvironmentV1, auditEnvironmentV1 } from "./environment.js";
 import { applyBoringFoundationV1, auditBoringFoundationV1 } from "./foundation-authority.js";
 import { applyScaffoldV2, auditRepo } from "./index.js";
-import { applyWorkflowProfileV1, auditWorkflowProfileV1 } from "./workflow-profile.js";
 import { clearCompatibilityHold, recordCompatibilityHold, refreshLatestStable } from "./refresh.js";
 import {
   buildBoringFoundationRolloutReport,
   recordRolloutResult,
   writeRolloutReport,
 } from "./rollout.js";
+import { applyWorkflowProfileV1, auditWorkflowProfileV1 } from "./workflow-profile.js";
 
 function resolveRepoRoot(inputPath: string | undefined): string {
   return path.resolve(process.cwd(), inputPath ?? ".");

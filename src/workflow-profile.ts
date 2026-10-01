@@ -163,13 +163,14 @@ function resolveDeclaration(
   }
 
   const uniqueRoles = [...new Set(enabledRoles)];
-  if (uniqueRoles.length !== enabledRoles.length || uniqueRoles.some((role) => role.trim() === "")) {
+  if (
+    uniqueRoles.length !== enabledRoles.length ||
+    uniqueRoles.some((role) => role.trim() === "")
+  ) {
     throw new Error("Enabled workflow roles must be unique non-empty values");
   }
   if (uniqueRoles.length > profile.maxEnabledRoles) {
-    throw new Error(
-      `Profile ${profileId} allows at most ${profile.maxEnabledRoles} enabled roles`,
-    );
+    throw new Error(`Profile ${profileId} allows at most ${profile.maxEnabledRoles} enabled roles`);
   }
 
   const unknownRoles = uniqueRoles.filter((role) => !profile.roles[role]);
@@ -182,9 +183,7 @@ function resolveDeclaration(
     .map(([role]) => role)
     .filter((role) => !uniqueRoles.includes(role));
   if (missingRequired.length > 0) {
-    throw new Error(
-      `Profile ${profileId} requires roles: ${missingRequired.join(", ")}`,
-    );
+    throw new Error(`Profile ${profileId} requires roles: ${missingRequired.join(", ")}`);
   }
 
   const workflows = Object.fromEntries(
@@ -284,9 +283,7 @@ export function auditWorkflowProfileV1(repoRoot: string, catalogPath: string) {
   const missingWorkflows = expected.filter((workflow) => !actual.includes(workflow));
   const unexpectedWorkflows = actual.filter((workflow) => !allowed.has(workflow));
   const legacySet = new Set(catalog.legacyWorkflowPaths);
-  const prunableLegacyWorkflows = unexpectedWorkflows.filter((workflow) =>
-    legacySet.has(workflow),
-  );
+  const prunableLegacyWorkflows = unexpectedWorkflows.filter((workflow) => legacySet.has(workflow));
 
   return {
     schemaVersion: 1,
