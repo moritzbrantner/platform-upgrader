@@ -17,6 +17,9 @@ Apply a deterministic structural migration:
 ```bash
 bunx @moritzbrantner/platform-upgrader apply scaffold-v2 .
 bunx @moritzbrantner/platform-upgrader apply environment-v1 .
+bunx @moritzbrantner/platform-upgrader apply workflow-profile-v1 . \\
+  --catalog ../reusable-workflows/profiles/workflow-profiles.json \\
+  --profile application --roles validate,pages
 ```
 
 Discover current stable toolchains and propose exact native pin updates:
@@ -39,6 +42,8 @@ bunx @moritzbrantner/platform-upgrader hold clear bun .
   - `audit [path]`
   - `apply scaffold-v2 [path]`
   - `apply environment-v1 [path]`
+  - `audit workflow-profile-v1 [path] --catalog <path>`
+  - `apply workflow-profile-v1 [path] --catalog <path> --profile <id> --roles <role,...>`
   - `hold record ...`
   - `hold clear ...`
 - explicit networked mutation:
@@ -67,10 +72,12 @@ A compatibility hold suppresses the same failed candidate only against the repos
 - `src/foundation.js`: standalone boring-foundation-v1 structural audit/mutation
 - `src/foundation-authority.js`: optional coding-tooling foundation authority adapter
 - `src/refresh.js`: latest-stable discovery, exact-pin proposal, and compatibility-hold helpers
+- `src/workflow-profile.js`: canonical workflow-profile audit/reconciliation
 - `migrations/scaffold-v2.md`: scaffold migration contract notes
 - `migrations/environment-v1.md`: environment migration contract notes
 - `migrations/foundation-authority.md`: authoritative foundation-audit integration contract
 - `migrations/latest-stable.md`: freshness/hold contract notes
+- `migrations/workflow-profile-v1.md`: canonical workflow-topology convergence contract
 - `.platform-upgrader.json.example`: scaffold-family downstream config example
 - `tests/platform-upgrader.test.js`: scaffold-v2 coverage
 - `tests/environment.test.js`: environment-v1 coverage
