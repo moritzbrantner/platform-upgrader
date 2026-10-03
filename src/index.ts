@@ -269,8 +269,6 @@ jobs:
     uses: ${CURRENT_WORKFLOWS}/fast-validation.yml@main
     with:
       command: ${checksCommand}
-    secrets:
-      node_auth_token: \${{ secrets.GH_PACKAGES_TOKEN }}
 `;
   }
 
