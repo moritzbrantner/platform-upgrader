@@ -73,6 +73,8 @@ describe("platform-upgrader apply scaffold-v2", () => {
           "fast-validation.yml@main",
         );
         expect(workflow).not.toContain("validate-repo.yml");
+        expect(workflow).not.toContain("GH_PACKAGES_TOKEN");
+        expect(workflow).not.toContain("node_auth_token");
       }
 
       for (const repoName of ["monorepo", "next-template", "expo-template", "electron-template"]) {
