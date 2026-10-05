@@ -144,6 +144,16 @@ describe("platform-upgrader audit", () => {
       expect(applyScaffoldV2(targetRoot).changed).toEqual([".github/workflows/release.yml"]);
       expect(existsSync(releasePath)).toBe(false);
 
+      await writeFile(
+        releasePath,
+        "jobs:\n  release:\n    uses: \"moritzbrantner/reusable-workflows/.github/workflows/release-template.yml@main\"\n",
+      );
+      expect(auditRepo(targetRoot).issues).toContain(
+        "release.yml still calls the shared release template; npm publishing is retired",
+      );
+      expect(applyScaffoldV2(targetRoot).changed).toEqual([".github/workflows/release.yml"]);
+      expect(existsSync(releasePath)).toBe(false);
+
       for (const customRelease of [
         "jobs:\n  release:\n    runs-on: ubuntu-latest\n    steps:\n      - run: bun run build\n",
         "jobs:\n  release:\n    uses: ./.github/workflows/release-template.yml@main\n",

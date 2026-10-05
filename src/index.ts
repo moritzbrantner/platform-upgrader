@@ -25,7 +25,7 @@ function callsSharedReleaseTemplate(filePath: string): boolean {
     readText(filePath)
       .split("\n")
       .some((line) => {
-        const action = line.match(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/)?.[1];
+        const action = line.match(/^\s*(?:-\s*)?uses:\s*["']?([^\s#"']+)/)?.[1];
         return action?.startsWith(`${CURRENT_WORKFLOWS}/release-template.yml@`) ?? false;
       })
   );
