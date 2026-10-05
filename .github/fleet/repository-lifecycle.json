@@ -109,10 +109,6 @@
       "status": "maintained",
       "reason": "active canonical .NET template with deterministic validation"
     },
-    "history-to-md": {
-      "status": "maintained",
-      "reason": "maintained dormant Rust utility with explicit validation hardening"
-    },
     "coding-agent-conventions": {
       "status": "maintained",
       "reason": "active shared coding-agent policy authority"
