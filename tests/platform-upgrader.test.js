@@ -144,11 +144,16 @@ describe("platform-upgrader audit", () => {
       expect(applyScaffoldV2(targetRoot).changed).toEqual([".github/workflows/release.yml"]);
       expect(existsSync(releasePath)).toBe(false);
 
-      const customRelease = "jobs:\n  release:\n    runs-on: ubuntu-latest\n    steps:\n      - run: bun run build\n";
-      await writeFile(releasePath, customRelease);
-      expect(applyScaffoldV2(targetRoot).changed).toEqual([]);
-      expect(await readFile(releasePath, "utf8")).toBe(customRelease);
-      expect(auditRepo(targetRoot).issues).toEqual([]);
+      for (const customRelease of [
+        "jobs:\n  release:\n    runs-on: ubuntu-latest\n    steps:\n      - run: bun run build\n",
+        "jobs:\n  release:\n    uses: ./.github/workflows/release-template.yml@main\n",
+        "jobs:\n  release:\n    uses: someone-else/workflows/.github/workflows/release-template.yml@v1\n",
+      ]) {
+        await writeFile(releasePath, customRelease);
+        expect(applyScaffoldV2(targetRoot).changed).toEqual([]);
+        expect(await readFile(releasePath, "utf8")).toBe(customRelease);
+        expect(auditRepo(targetRoot).issues).toEqual([]);
+      }
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

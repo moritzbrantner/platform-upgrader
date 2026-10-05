@@ -16,8 +16,9 @@ function usesCurrentWorkflow(filePath: string): boolean {
 }
 
 // npm publishing is retired: a release caller of the shared release template only existed to
-// publish packages, so scaffold-v2 removes it instead of regenerating it. Repository-specific
-// release workflows that do not call the shared template are left untouched.
+// publish packages, so scaffold-v2 removes it instead of regenerating it. Release workflows that
+// do not call the shared template (including local or third-party `release-template.yml`
+// workflows) are left untouched.
 function callsSharedReleaseTemplate(filePath: string): boolean {
   return (
     existsSync(filePath) &&
@@ -25,7 +26,7 @@ function callsSharedReleaseTemplate(filePath: string): boolean {
       .split("\n")
       .some((line) => {
         const action = line.match(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/)?.[1];
-        return action?.includes("/release-template.yml@") ?? false;
+        return action?.startsWith(`${CURRENT_WORKFLOWS}/release-template.yml@`) ?? false;
       })
   );
 }
