@@ -12,7 +12,7 @@ jobs:
       contents: write
       packages: write
       id-token: write
-    uses: moritzbrantner/reusable-workflows/.github/workflows/release-template.yml@main
+    uses: moritzbrantner/reusable-workflows/.github/workflows/release-template.yml@8537c5248901410d179785f0c836739250bb5723 # main
     with:
       bun_version: 1.4.2
       install_command: bun install --frozen-lockfile
