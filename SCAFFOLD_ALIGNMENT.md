@@ -22,8 +22,8 @@ Shared:
 ## Update path
 
 1. Land upgrader contract changes in `monorepo`.
-2. Implement them here and release a new package version.
-3. Adopt the new CLI version from maintained repos with explicit PRs.
+2. Implement them here and merge them to `main`.
+3. Adopt the new CLI commit from maintained repos with explicit PRs that bump the git pin.
 
 ## What must not drift
 

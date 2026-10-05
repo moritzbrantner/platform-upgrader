@@ -10,4 +10,4 @@ This example migration should:
 
 The real upgrader implementation should make deterministic, reviewable edits and remain idempotent across repeated runs.
 
-Generated release callers follow the current shared `release-template.yml@main` interface, including its `contents`, `packages`, and `id-token` write permissions. Those grants are required for GitHub to accept the reusable call even when the scaffold has not configured a publishing command. Publishing remains an explicit caller-owned release command; migration does not run it. The upgrader's own release workflow uses the same interface and frozen dependency installation.
+npm publishing is retired. Migration removes a `.github/workflows/release.yml` that calls the shared `release-template.yml` (its only job was publishing packages) and audit reports one that remains; repository-specific release workflows that do not call the shared template are left untouched. The upgrader itself has no release workflow and is consumed as a commit-pinned git dependency.

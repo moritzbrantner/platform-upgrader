@@ -81,10 +81,12 @@ describe("platform-upgrader apply scaffold-v2", () => {
         const config = JSON.parse(await readFile(path.join(tempRoot, repoName, ".platform-upgrader.json"), "utf8"));
         expect(config.workflowMode).toBe("current-reusable");
       }
-      for (const workflowName of ["release.yml", "snapshot-stage.yml"]) {
-        const workflow = await readFile(path.join(tempRoot, "monorepo", ".github", "workflows", workflowName), "utf8");
-        expect(workflow).toContain("@main");
-      }
+      const snapshotWorkflow = await readFile(
+        path.join(tempRoot, "monorepo", ".github", "workflows", "snapshot-stage.yml"),
+        "utf8",
+      );
+      expect(snapshotWorkflow).toContain("@main");
+      expect(existsSync(path.join(tempRoot, "monorepo", ".github", "workflows", "release.yml"))).toBe(false);
 
       for (const [repoName, workflowName] of [
         ["monorepo", "main.yml"],
@@ -120,6 +122,33 @@ describe("platform-upgrader audit", () => {
         expect(result.ok).toBe(true);
         expect(result.issues).toEqual([]);
       }
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("flags release callers of the shared release template and keeps custom release workflows", async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "platform-upgrader-release-audit-"));
+    try {
+      const targetRoot = path.join(tempRoot, "expo-template");
+      await cp(path.join(repoRoot, "tests", "fixtures", "expo-template"), targetRoot, { recursive: true });
+      applyScaffoldV2(targetRoot);
+      const releasePath = path.join(targetRoot, ".github", "workflows", "release.yml");
+      await writeFile(
+        releasePath,
+        "jobs:\n  release:\n    uses: moritzbrantner/reusable-workflows/.github/workflows/release-template.yml@main\n",
+      );
+      expect(auditRepo(targetRoot).issues).toContain(
+        "release.yml still calls the shared release template; npm publishing is retired",
+      );
+      expect(applyScaffoldV2(targetRoot).changed).toEqual([".github/workflows/release.yml"]);
+      expect(existsSync(releasePath)).toBe(false);
+
+      const customRelease = "jobs:\n  release:\n    runs-on: ubuntu-latest\n    steps:\n      - run: bun run build\n";
+      await writeFile(releasePath, customRelease);
+      expect(applyScaffoldV2(targetRoot).changed).toEqual([]);
+      expect(await readFile(releasePath, "utf8")).toBe(customRelease);
+      expect(auditRepo(targetRoot).issues).toEqual([]);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
