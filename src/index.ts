@@ -15,6 +15,22 @@ function usesCurrentWorkflow(filePath: string): boolean {
   );
 }
 
+// npm publishing is retired: a release caller of the shared release template only existed to
+// publish packages, so scaffold-v2 removes it instead of regenerating it. Release workflows that
+// do not call the shared template (including local or third-party `release-template.yml`
+// workflows) are left untouched.
+function callsSharedReleaseTemplate(filePath: string): boolean {
+  return (
+    existsSync(filePath) &&
+    readText(filePath)
+      .split("\n")
+      .some((line) => {
+        const action = line.match(/^\s*(?:-\s*)?uses:\s*["']?([^\s#"']+)/)?.[1];
+        return action?.startsWith(`${CURRENT_WORKFLOWS}/release-template.yml@`) ?? false;
+      })
+  );
+}
+
 type JsonObject = Record<string, unknown>;
 
 type ScaffoldConfig = JsonObject & {
@@ -272,25 +288,6 @@ jobs:
 `;
   }
 
-  if (workflowName === "release.yml") {
-    contents = `name: Release
-
-on:
-  workflow_dispatch:
-
-jobs:
-  release:
-    permissions:
-      contents: write
-      packages: write
-      id-token: write
-    uses: ${CURRENT_WORKFLOWS}/release-template.yml@main
-    with:
-      release_type: scaffold-v2
-      validate_command: bun run build
-`;
-  }
-
   if (workflowName === "snapshot-stage.yml") {
     contents = `name: Snapshot Stage
 
@@ -360,7 +357,7 @@ export function auditRepo(repoRoot: string): {
     if (!existsSync(path.join(repoRoot, "SCAFFOLD_V2.md"))) {
       issues.push("SCAFFOLD_V2.md is missing");
     }
-    for (const workflow of ["main.yml", "release.yml", "snapshot-stage.yml"]) {
+    for (const workflow of ["main.yml", "snapshot-stage.yml"]) {
       const filePath = path.join(repoRoot, ".github", "workflows", workflow);
       if (!usesCurrentWorkflow(filePath)) {
         issues.push(`${workflow} is not using current reusable workflows`);
@@ -379,6 +376,10 @@ export function auditRepo(repoRoot: string): {
         issues.push("expo-template app.manifest.ts is missing sharedPackages: []");
       }
     }
+  }
+
+  if (callsSharedReleaseTemplate(path.join(repoRoot, ".github", "workflows", "release.yml"))) {
+    issues.push("release.yml still calls the shared release template; npm publishing is retired");
   }
 
   if (repoName === "next-template") {
@@ -485,11 +486,18 @@ export function applyScaffoldV2(repoRoot: string): {
     }
   }
 
+  const releaseWorkflow = ".github/workflows/release.yml";
+  if (
+    callsSharedReleaseTemplate(path.join(repoRoot, releaseWorkflow)) &&
+    removeIfExists(repoRoot, releaseWorkflow)
+  ) {
+    changes.push(releaseWorkflow);
+  }
+
   for (const workflowName of [
     "validate.yml",
     "ci.yml",
     "main.yml",
-    "release.yml",
     "snapshot-stage.yml",
     "beta-tier.yml",
     "main-tier.yml",

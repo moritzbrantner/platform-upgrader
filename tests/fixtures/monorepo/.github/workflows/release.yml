@@ -5,6 +5,14 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    steps:
-      - run: bun run build
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    uses: moritzbrantner/reusable-workflows/.github/workflows/release-template.yml@scaffold-v2-initial
+    with:
+      release_type: scaffold-v2
+      validate_command: bun run build
+      release_command: bun run release:publish
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

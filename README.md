@@ -85,8 +85,8 @@ A compatibility hold suppresses the same failed candidate only against the repos
 
 ## Release model
 
-- publish to GitHub Packages
-- consume from maintained repos with `bunx @moritzbrantner/platform-upgrader ...`
+- no registry publishing: the package is not published to npm or GitHub Packages
+- consume from maintained repos as a commit-pinned git dev dependency, `"@moritzbrantner/platform-upgrader": "git+https://github.com/moritzbrantner/platform-upgrader.git#<sha>"`, listed in `trustedDependencies` so its `prepare` script builds `dist/` on install (the `bin` entry is the tracked `src/cli.js` shim, so bun links it before `dist/` exists); then run `bunx @moritzbrantner/platform-upgrader ...`
 - keep downstream adoption and upgrades reviewable through explicit PRs rather than hidden sync/runtime mutation
 
 See [SCAFFOLD_ALIGNMENT.md](./SCAFFOLD_ALIGNMENT.md) for the scaffold-family alignment contract. The repository-environment contract is owned by `moritzbrantner/monorepo` in `REPOSITORY_ENVIRONMENTS.md`.
