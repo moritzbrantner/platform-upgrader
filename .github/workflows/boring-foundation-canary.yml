@@ -28,12 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout platform upgrader
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           path: upgrader
 
       - name: Checkout coding-tooling authority
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: moritzbrantner/coding-tooling
           path: coding-tooling
@@ -51,56 +51,56 @@ jobs:
           bun run build
 
       - name: Checkout rect
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: moritzbrantner/rect
           path: fleet/rect
           persist-credentials: false
 
       - name: Checkout ecs-lab
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: moritzbrantner/ecs-lab
           path: fleet/ecs-lab
           persist-credentials: false
 
       - name: Checkout shader-lab
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: moritzbrantner/shader-lab
           path: fleet/shader-lab
           persist-credentials: false
 
       - name: Checkout moenarch-foundation
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: moritzbrantner/moenarch-foundation
           path: fleet/moenarch-foundation
           persist-credentials: false
 
       - name: Checkout audio-analysis
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: moritzbrantner/audio-analysis
           path: fleet/audio-analysis
           persist-credentials: false
 
       - name: Checkout ui
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: moritzbrantner/ui
           path: fleet/ui
           persist-credentials: false
 
       - name: Checkout rust-packages
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: moritzbrantner/rust-packages
           path: fleet/rust-packages
           persist-credentials: false
 
       - name: Checkout nlp-stack
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: moritzbrantner/nlp-stack
           path: fleet/nlp-stack
