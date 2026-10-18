@@ -81,7 +81,7 @@ jobs:
     uses: ./.github/workflows/boring-foundation-fleet.yml
 
   merge-ready:
-    name: merge-ready
+    name: ${{ github.event_name == 'pull_request' && 'merge-ready' || 'validation-summary' }}
     if: ${{ always() }}
     needs: ["test", "validate-boring-foundation-canary", "validate-boring-foundation-fleet", "validation-scope"]
     runs-on: ubuntu-latest
