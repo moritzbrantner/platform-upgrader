@@ -9,6 +9,40 @@ permissions:
   contents: read
 
 jobs:
+  validation-scope:
+    runs-on: ubuntu-latest
+    outputs:
+      validate-boring-foundation-canary: ${{ steps.scope.outputs.validate-boring-foundation-canary }}
+      validate-boring-foundation-fleet: ${{ steps.scope.outputs.validate-boring-foundation-fleet }}
+      allow-skipped: ${{ steps.scope.outputs.allow-skipped }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+      - id: scope
+        shell: python
+        run: |
+          import fnmatch
+          import json
+          import os
+          import subprocess
+          scopes = {'validate-boring-foundation-canary': {'paths': ['.github/workflows/boring-foundation-canary.yml', 'src/cli.js', 'src/cli.ts', 'src/environment.js', 'src/environment.ts', 'src/foundation.js', 'src/foundation.ts', 'src/foundation-authority.js', 'src/foundation-authority.ts', 'src/rollout.js', 'src/rollout.ts', 'tests/environment.test.js', 'tests/foundation.test.js', 'tests/foundation-authority.test.js', 'tests/rollout.test.js', '.github/workflows/validate.yml'], 'branches': []}, 'validate-boring-foundation-fleet': {'paths': ['.github/fleet/repository-lifecycle.json', '.github/workflows/boring-foundation-fleet.yml', '.github/workflows/validate.yml'], 'branches': []}}
+          selected = {job: False for job in scopes}
+          if os.environ["GITHUB_EVENT_NAME"] == "pull_request":
+              with open(os.environ["GITHUB_EVENT_PATH"]) as source:
+                  pull_request = json.load(source)["pull_request"]
+              revision = pull_request["base"]["sha"] + "..." + pull_request["head"]["sha"]
+              paths = subprocess.check_output(["git", "diff", "--no-renames", "--name-only", "-z", revision]).decode().split("\0")
+              selected = {
+                  job: (not rule["paths"] or any(fnmatch.fnmatchcase(path, pattern) for path in paths for pattern in rule["paths"]))
+                  and (not rule["branches"] or any(fnmatch.fnmatchcase(pull_request["base"]["ref"], branch) for branch in rule["branches"]))
+                  for job, rule in scopes.items()
+              }
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              for job, active in selected.items():
+                  print(f"{job}={str(active).lower()}", file=output)
+              print(f"allow-skipped={json.dumps([job for job, active in selected.items() if not active])}", file=output)
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -31,3 +65,31 @@ jobs:
     with:
       operation: findings
       report_path: .artifacts/coding-tooling/findings.json
+
+  validate-boring-foundation-canary:
+    needs: validation-scope
+    if: github.event_name == 'pull_request' && needs.validation-scope.outputs.validate-boring-foundation-canary == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/boring-foundation-canary.yml
+
+  validate-boring-foundation-fleet:
+    needs: validation-scope
+    if: github.event_name == 'pull_request' && needs.validation-scope.outputs.validate-boring-foundation-fleet == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/boring-foundation-fleet.yml
+
+  merge-ready:
+    name: ${{ github.event_name == 'pull_request' && 'merge-ready' || 'validation-summary' }}
+    if: ${{ always() }}
+    needs: ["test", "validate-boring-foundation-canary", "validate-boring-foundation-fleet", "validation-scope"]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: moritzbrantner/reusable-workflows/.github/actions/merge-ready@b0f25f241d76af2584dfc9e375084ff5c5cb97da
+        with:
+          needs: ${{ toJSON(needs) }}
+          required: '["test", "validate-boring-foundation-canary", "validate-boring-foundation-fleet", "validation-scope"]'
+          allow-skipped: ${{ needs.validation-scope.outputs.allow-skipped || '[]' }}

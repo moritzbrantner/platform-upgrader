@@ -1,23 +1,7 @@
 name: Boring Foundation Canary Audit
 
 on:
-  pull_request:
-    paths:
-      - .github/workflows/boring-foundation-canary.yml
-      - src/cli.js
-      - src/cli.ts
-      - src/environment.js
-      - src/environment.ts
-      - src/foundation.js
-      - src/foundation.ts
-      - src/foundation-authority.js
-      - src/foundation-authority.ts
-      - src/rollout.js
-      - src/rollout.ts
-      - tests/environment.test.js
-      - tests/foundation.test.js
-      - tests/foundation-authority.test.js
-      - tests/rollout.test.js
+  workflow_call:
   workflow_dispatch:
 
 permissions:

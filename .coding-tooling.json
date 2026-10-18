@@ -9,6 +9,6 @@
   "optionalCapabilities": ["format:check"],
   "merge": {
     "authority": "hosted",
-    "requiredChecks": ["test"]
+    "requiredChecks": ["merge-ready"]
   }
 }
