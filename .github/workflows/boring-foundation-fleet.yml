@@ -1,10 +1,7 @@
 name: Boring Foundation Fleet
 
 on:
-  pull_request:
-    paths:
-      - .github/fleet/repository-lifecycle.json
-      - .github/workflows/boring-foundation-fleet.yml
+  workflow_call:
   push:
     branches:
       - main
