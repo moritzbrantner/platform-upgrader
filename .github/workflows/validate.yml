@@ -56,7 +56,7 @@ jobs:
   findings:
     permissions:
       contents: read
-    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@da391f744a0d28ea8f38c37aa17ba17b5397a192 # main
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@d5717786a8fb6485e1df1f3dcdd8e9c1d2f3fff9 # main
     with:
       operation: findings
       report_path: .artifacts/coding-tooling/findings.json
