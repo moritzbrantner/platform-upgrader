@@ -194,6 +194,17 @@ function packageData(repoRoot: string): JsonObject | null {
   return isRecord(parsed) ? parsed : null;
 }
 
+// BUN-001 (owner decision 2026-11-23): Bun repositories declare no packageManager and use the
+// latest stable Bun, so a committed Bun lockfile identifies them as well as a legacy pin.
+function usesBun(repoRoot: string, packageJson: JsonObject): boolean {
+  const packageManager =
+    typeof packageJson.packageManager === "string" ? packageJson.packageManager : "";
+  if (packageManager !== "") {
+    return packageManager.startsWith("bun@");
+  }
+  return ["bun.lock", "bun.lockb"].some((name) => existsSync(path.join(repoRoot, name)));
+}
+
 function objectValue(value: unknown): JsonObject {
   return isRecord(value) ? value : {};
 }
@@ -202,9 +213,7 @@ export function detectRepositoryStack(repoRoot: string): string[] {
   const stack = new Set<string>();
   const packageJson = packageData(repoRoot);
   if (packageJson) {
-    const packageManager =
-      typeof packageJson.packageManager === "string" ? packageJson.packageManager : "";
-    stack.add(packageManager.startsWith("bun@") ? "bun" : "node");
+    stack.add(usesBun(repoRoot, packageJson) ? "bun" : "node");
     const dependencies = {
       ...objectValue(packageJson.dependencies),
       ...objectValue(packageJson.devDependencies),
@@ -241,7 +250,7 @@ export function detectRepositoryStack(repoRoot: string): string[] {
   return [...stack].sort();
 }
 
-function packageValidationCommand(packageJson: JsonObject): string | null {
+function packageValidationCommand(repoRoot: string, packageJson: JsonObject): string | null {
   const scripts = objectValue(packageJson.scripts);
   const script = ["ci", "verify", "check", "test"].find(
     (candidate) => typeof scripts[candidate] === "string",
@@ -252,7 +261,7 @@ function packageValidationCommand(packageJson: JsonObject): string | null {
 
   const packageManager =
     typeof packageJson.packageManager === "string" ? packageJson.packageManager : "";
-  if (packageManager.startsWith("bun@")) {
+  if (usesBun(repoRoot, packageJson)) {
     return `bun run ${script}`;
   }
   if (packageManager.startsWith("pnpm@")) {
@@ -278,7 +287,7 @@ export function repositoryValidationCommand(repoRoot: string): {
 } {
   const packageJson = packageData(repoRoot);
   if (packageJson) {
-    const packageCommand = packageValidationCommand(packageJson);
+    const packageCommand = packageValidationCommand(repoRoot, packageJson);
     if (packageCommand) {
       return { command: packageCommand, source: "package-script" };
     }

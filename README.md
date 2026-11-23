@@ -59,7 +59,7 @@ bunx @moritzbrantner/platform-upgrader hold clear bun .
 
 The first supported resolvers are Bun and Rust:
 
-- Bun uses the latest stable `oven-sh/bun` GitHub release and requires an exact `bun-vX.Y.Z` tag.
+- Bun uses the latest stable `oven-sh/bun` GitHub release and requires an exact `bun-vX.Y.Z` tag. It only refreshes a legacy `package.json#packageManager` pin: under BUN-001 (owner decision 2026-11-23) Bun repositories declare no version, are recognised by their committed `bun.lock`, and run whatever latest stable Bun is installed.
 - Rust uses the official stable channel distribution manifest and reads the exact `pkg.rust.version`.
 
 A compatibility hold suppresses the same failed candidate only against the repository revision that was tested. New repository code or a newer stable candidate may be evaluated again.

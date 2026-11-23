@@ -34,6 +34,7 @@ describe("environment-v1", () => {
     try {
       const cases = [
         ["bun-only", { "package.json": '{"packageManager":"bun@1.4.0"}\n' }],
+        ["bun-latest", { "package.json": "{}\n", "bun.lock": "{}\n" }],
         ["bun-version-only", { ".bun-version": "1.4.0\n" }],
         ["node-only", { ".node-version": "24.20.0\n" }],
         [
@@ -68,6 +69,13 @@ describe("environment-v1", () => {
       );
       expect(combinedConfig).toContain("bun install --frozen-lockfile");
       expect(combinedConfig).toContain("cargo fetch --locked");
+
+      const latestBunConfig = await readFile(
+        path.join(tempRoot, "bun-latest", ".repository-environment.toml"),
+        "utf8",
+      );
+      expect(latestBunConfig).toContain("bun install --frozen-lockfile");
+      expect(latestBunConfig).toContain("~/.bun/install/cache");
 
       const versionFileConfig = await readFile(
         path.join(tempRoot, "bun-version-only", ".repository-environment.toml"),

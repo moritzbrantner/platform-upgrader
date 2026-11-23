@@ -107,6 +107,21 @@ describe("boring foundation rollout report", () => {
     expect(record.finalStatus).toBe("planned");
   });
 
+  test("runs a Bun repository without packageManager through Bun", () => {
+    const repoRoot = fixture();
+    writeFileSync(
+      path.join(repoRoot, "package.json"),
+      `${JSON.stringify({ scripts: { check: "true" } })}\n`,
+    );
+    expect(repositoryValidationCommand(repoRoot).command).toBe("npm run check");
+
+    writeFileSync(path.join(repoRoot, "bun.lock"), "{}\n");
+    expect(repositoryValidationCommand(repoRoot)).toEqual({
+      command: "bun run check",
+      source: "package-script",
+    });
+  });
+
   test("uses Cargo locking only when the repository tracks a lockfile", () => {
     const fleet = fixture();
     const repoRoot = path.join(fleet, "rust-workspace");

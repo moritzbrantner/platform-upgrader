@@ -44,11 +44,19 @@ function detectedEnvironment(repoRoot: string): { setup: string[]; cache: string
   const setup: string[] = [];
   const cache: string[] = [];
   const { packageManagerVersion, versionFileVersion } = bunPin(repoRoot);
+  // BUN-001 (owner decision 2026-11-23): a root Bun lockfile without any pin is a Bun root that
+  // uses the latest stable Bun.
+  const bunLockfile = ["bun.lock", "bun.lockb"].some((name) =>
+    existsSync(path.join(repoRoot, name)),
+  );
+  const bunRoot =
+    packageManagerVersion !== null ||
+    (bunLockfile && existsSync(path.join(repoRoot, "package.json")));
 
-  if (packageManagerVersion !== null) {
+  if (bunRoot) {
     setup.push("bun install --frozen-lockfile");
   }
-  if (packageManagerVersion !== null || versionFileVersion !== null) {
+  if (bunRoot || versionFileVersion !== null) {
     cache.push("~/.bun/install/cache");
   }
 
